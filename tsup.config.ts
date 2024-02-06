@@ -4,7 +4,7 @@ import { defineConfig } from 'tsup';
 export default defineConfig({
   entry: ['lib/index.ts'],
   format: ['esm'],
-  outDir: 'build',
+  outDir: 'dist',
   dts: true,
   clean: true,
   minify: true,
