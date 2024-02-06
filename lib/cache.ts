@@ -2,10 +2,11 @@ const logPrefix = 'light-query:::';
 const defaultGarbageCollectorInterval = 500;
 const defaultCacheTime = 1000 * 60 * 5;
 const defaultStaleTime = 0;
+
 export type QueryState<T> = {
   data: T | undefined;
   isLoading: boolean;
-  error: Error | undefined;
+  error: unknown | undefined;
   cacheTime: number;
   staleTime: number;
   lastAccessedAt?: number;
@@ -13,7 +14,7 @@ export type QueryState<T> = {
 };
 export type Cache = {
   data: {
-    [key: string]: QueryState<unknown>;
+    [key: string]: QueryState<any>;
   };
   listeners: {
     [key: string]: (() => void)[];
@@ -23,11 +24,11 @@ export type Cache = {
     values: Partial<QueryState<T>>,
     notify?: boolean
   ) => void;
-  subscribe: <T>(key: string, listener: () => void) => () => void;
-  initQueryParams: <T>(key: string) => void;
+  subscribe: (key: string, listener: () => void) => () => void;
+  initQueryParams: (key: string) => void;
   getQueryParams: <T>(key: string) => QueryState<T> | undefined;
   fetchQuery: <T>(key: string, getter: () => Promise<T> | T) => Promise<void>;
-  garbageCollectorInterval?: number | undefined;
+  garbageCollectorInterval?: NodeJS.Timeout | undefined;
   toggleGarbageCollector: (enabled: boolean) => void;
 };
 export const createCache = (options?: {
@@ -38,38 +39,51 @@ export const createCache = (options?: {
   const newCache: Cache = {
     data: {},
     listeners: {},
-    setQueryParams(key: string, values, notify = true) {
-      if (!this.data[key]) {
-        this.data[key] = {
+    setQueryParams<T>(
+      key: string,
+      values: Partial<QueryState<T>>,
+      notify = true
+    ) {
+      let state = this.data[key];
+      if (!state) {
+        state = {
           data: undefined,
           isLoading: false,
           error: undefined,
           cacheTime: options?.cacheTime ?? defaultCacheTime,
           staleTime: options?.staleTime ?? defaultStaleTime,
         };
+        this.data[key] = state;
       }
       this.data[key] = {
-        ...this.data[key],
+        ...state,
         ...values,
       };
-      if (notify && this.listeners[key]) {
+      let listeners = this.listeners[key];
+      if (notify && Array.isArray(listeners)) {
         try {
-          this.listeners[key].forEach((listener) => listener());
+          listeners.forEach((listener) => listener());
         } catch (e) {
           console.error(logPrefix, 'Error in listener', e);
         }
       }
     },
     subscribe(key, listener) {
-      if (!this.listeners[key]) {
-        this.listeners[key] = [];
+      let listeners = this.listeners[key];
+      if (!listeners) {
+        listeners = [];
+        this.listeners[key] = listeners;
       }
-      this.listeners[key].push(listener);
+      listeners.push(listener);
       return () => {
-        this.listeners[key] = this.listeners[key].filter((l) => l !== listener);
+        let listeners = this.listeners[key];
+        if (!Array.isArray(listeners)) {
+          return;
+        }
+        this.listeners[key] = listeners.filter((l) => l !== listener);
       };
     },
-    initQueryParams<T>(key: string) {
+    initQueryParams(key: string) {
       if (!this.data[key]) {
         this.data[key] = {
           data: undefined,
@@ -137,7 +151,8 @@ export const createCache = (options?: {
             if (!data) {
               return;
             }
-            if (this.listeners[key].length > 0) {
+            let listeners = this.listeners[key];
+            if (Array.isArray(listeners) && listeners.length > 0) {
               return;
             }
             if (

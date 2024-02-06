@@ -4,13 +4,19 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsup"
+    "build": "tsup",
+    "test": "jest"
   },
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@jest/globals": "^29.7.0",
     "@types/react": "^18.2.55",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
     "prettier": "^3.2.5",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
     "tsup": "^8.0.1",
     "utility-types": "^3.11.0"
   },

@@ -34,7 +34,7 @@ export const useQuery = <T>(params: UseQueryParams<T>, cache = globalCache) => {
     setIsLoading(isLoading);
     setError(error);
   }, []);
-  const refetchTimer = useRef<number | undefined>(undefined);
+  const refetchTimer = useRef<NodeJS.Timeout | undefined>(undefined);
   const fetchQuery = useCallback(
     async (
       key: string,

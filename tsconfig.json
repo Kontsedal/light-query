@@ -1,10 +1,25 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "ES2022",
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "checkJs": true,
+    "declaration": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "strict": true,
+    "isolatedModules": true,
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2020"
   }
 }
