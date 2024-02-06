@@ -7,4 +7,5 @@ export default defineConfig({
   outDir: 'build',
   dts: true,
   clean: true,
+  minify: true,
 });

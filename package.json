@@ -11,7 +11,8 @@
   "devDependencies": {
     "@types/react": "^18.2.55",
     "prettier": "^3.2.5",
-    "tsup": "^8.0.1"
+    "tsup": "^8.0.1",
+    "utility-types": "^3.11.0"
   },
   "peerDependencies": {
     "react": "^18.2.0"
