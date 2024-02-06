@@ -1,18 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const logPrefix = 'light-query:::';
 
+export type UseQueryGetter<T> = () => Promise<T> | T;
+export type UseQueryRefetchInterval <T>= number | ((latestData: T | undefined) => number);
 export type UseQueryParams<T> = {
-  key: (string | number)[];
-  getter: () => Promise<T> | T;
-  cacheTime?: number;
+  key: string;
+  getter: UseQueryGetter<T>;
+  refetchInterval?: UseQueryRefetchInterval<T>;
 };
 
 export type QueryState<T> = {
   data: T | undefined;
   isLoading: boolean;
   error: Error | undefined;
-  cacheTime?: number;
 };
 
 export type Cache = {
@@ -29,9 +30,11 @@ export type Cache = {
   ) => void;
   subscribe: <T>(key: string, listener: () => void) => () => void;
   initQueryParams: <T>(key: string) => void;
-  getQueryParams: <T>(key: string) => QueryState<T>;
+  getQueryParams: <T>(key: string) => QueryState<T> | undefined;
+  fetchQuery: <T>(key: string, getter: () => Promise<T> | T) => Promise<void>
 };
-export const cache: Cache = {
+
+export const createCache = (): Cache => ({
   data: {},
   listeners: {},
   setQueryParams(key: string, values, notify = true) {
@@ -69,64 +72,89 @@ export const cache: Cache = {
         data: undefined,
         isLoading: false,
         error: undefined,
-        cacheTime: Infinity,
       };
     }
   },
   getQueryParams<T>(key: string): QueryState<T> {
     return this.data[key] as QueryState<T>;
   },
-};
-export const useQuery = <E, T>(params: UseQueryParams<T>) => {
-  const queryKey = serializeKey(params.key);
-  const [data, setData] = useState<T | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<unknown | undefined>(undefined);
-  useEffect(() => {
-    cache.initQueryParams(queryKey);
-    return cache.subscribe(queryKey, () => {
-      const { data, isLoading, error } = cache.getQueryParams<T>(queryKey);
-      setData(data);
-      setIsLoading(isLoading);
-      setError(error);
-    });
-  }, []);
-  useEffect(() => {
-    cache.setQueryParams(
-      queryKey,
-      {
-        isLoading: true,
-        error: undefined,
-      },
-      true
-    );
 
-    (async () => {
-      try {
-        const result = await params.getter();
-        cache.setQueryParams(queryKey, {
-          data: result,
-          isLoading: false,
-          error: undefined,
-        });
-      } catch (e) {
-        cache.setQueryParams(queryKey, {
-          isLoading: false,
-          error: e as Error,
-        });
+  async fetchQuery<T>(key: string, getter: () => Promise<T> | T) {
+    this.initQueryParams(key);
+    const queryState = this.getQueryParams<T>(key);
+    if (!queryState || queryState.isLoading) {
+      return;
+    }
+    this.setQueryParams(key, {
+      isLoading: true,
+      error: undefined,
+    });
+    try {
+      const result = await getter();
+      this.setQueryParams(key, {
+        data: result,
+        isLoading: false,
+        error: undefined,
+      });
+    } catch (e) {
+      this.setQueryParams(key, {
+        isLoading: false,
+        error: e as Error,
+      });
+    }
+  }
+})
+export const globalCache: Cache = createCache();
+export const useQuery = <T>(params: UseQueryParams<T>, cache = globalCache) => {
+  const initialQueryState = useRef(cache.getQueryParams<T>(params.key))
+  const [data, setData] = useState<T | undefined>(initialQueryState.current?.data);
+  const [isLoading, setIsLoading] = useState(initialQueryState.current?.isLoading ?? false);
+  const [error, setError] = useState<unknown | undefined>(initialQueryState.current?.error ?? undefined);
+  const syncQueryState = useCallback((key: string) => {
+    const queryState =  cache.getQueryParams<T>(key);
+    if(!queryState) {
+      return;
+    }
+    const { data, isLoading, error } = queryState;
+    setData(data);
+    setIsLoading(isLoading);
+    setError(error);
+  }, [])
+  const refetchTimer = useRef<number | undefined>(undefined);
+  const fetchQuery = useCallback(async (key: string, getter: UseQueryGetter<T>, refetchInterval?: UseQueryRefetchInterval<T>) => {
+    await cache.fetchQuery(params.key, params.getter);
+    const queryState =  cache.getQueryParams<T>(key);
+    if(!queryState) {
+      return;
+    }
+    const { data } = queryState;
+    if(refetchInterval) {
+      const interval = typeof refetchInterval === "number" ? refetchInterval : refetchInterval(data);
+      refetchTimer.current = setTimeout(() => {
+        fetchQuery(key, getter, refetchInterval);
+      }, interval)
+    }
+  }, [params.key, params.getter, params.refetchInterval]);
+  useEffect(() => {
+    cache.initQueryParams(params.key);
+    syncQueryState(params.key);
+    const unsubscribe = cache.subscribe(params.key, () => {
+      syncQueryState(params.key);
+    });
+    return () => {
+      if(refetchTimer.current) {
+        clearTimeout(refetchTimer.current);
       }
-    })();
-  }, []);
+      unsubscribe();
+    }
+  }, [params.key]);
   return useMemo(
     () => ({
       data,
       isLoading,
       error,
+      refetch: () => fetchQuery(params.key, params.getter, params.refetchInterval),
     }),
-    [data, isLoading, error, params]
+    [data, isLoading, error, params.key]
   );
 };
-
-function serializeKey(key: (string | number)[]) {
-  return key.join('-');
-}
