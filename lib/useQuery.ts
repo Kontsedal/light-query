@@ -39,21 +39,21 @@ export const useQuery = <T>(params: UseQueryParams<T>, cache = globalCache) => {
     async (
       key: string,
       getter: UseQueryGetter<T>,
+      force: boolean,
       refetchInterval?: UseQueryRefetchInterval<T>
     ) => {
-      await cache.fetchQuery(key, getter);
-      const queryState = cache.getQueryState<T>(key);
-      if (!queryState) {
-        return;
-      }
-      const { data } = queryState;
+      await cache.fetchQuery(key, getter, force);
       if (refetchInterval) {
+        const queryState = cache.getQueryState<T>(key);
         const interval =
           typeof refetchInterval === "number"
             ? refetchInterval
-            : refetchInterval(data);
+            : refetchInterval(queryState?.data);
+        if (typeof interval !== "number" || interval <= 0) {
+          return;
+        }
         refetchTimer.current = setTimeout(() => {
-          fetchQuery(key, getter, refetchInterval);
+          fetchQuery(key, getter, true, refetchInterval);
         }, interval);
       }
     },
@@ -67,7 +67,6 @@ export const useQuery = <T>(params: UseQueryParams<T>, cache = globalCache) => {
     if (params.staleTime) {
       queryParams.staleTime = params.staleTime;
     }
-    cache.initQueryState(params.key);
     if (Object.keys(queryParams).length > 0) {
       cache.setQueryState(params.key, queryParams, false);
     }
@@ -75,6 +74,7 @@ export const useQuery = <T>(params: UseQueryParams<T>, cache = globalCache) => {
     const unsubscribe = cache.subscribe(params.key, () => {
       syncQueryState(params.key);
     });
+    fetchQuery(params.key, params.getter, false, params.refetchInterval);
     return () => {
       if (refetchTimer.current) {
         clearTimeout(refetchTimer.current);
@@ -88,7 +88,7 @@ export const useQuery = <T>(params: UseQueryParams<T>, cache = globalCache) => {
       isLoading,
       error,
       refetch: () =>
-        fetchQuery(params.key, params.getter, params.refetchInterval),
+        fetchQuery(params.key, params.getter, true, params.refetchInterval),
     }),
     [data, isLoading, error, params.key]
   );

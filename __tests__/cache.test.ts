@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { createCache } from "../lib";
 import { faker } from "@faker-js/faker";
+import { wait } from "./utils";
 
 describe("cache", () => {
   let queryKey: string = "";
@@ -89,16 +90,20 @@ describe("cache", () => {
     it("should fetch query without errors", async () => {
       const cache = createCache();
       expect(async () => {
-        await cache.fetchQuery(queryKey, () => queryData);
+        await cache.fetchQuery(queryKey, () => queryData, false);
       }).not.toThrow();
     });
 
     it("should set query state to loading before fetching", async () => {
       const cache = createCache();
-      cache.fetchQuery(queryKey, async () => {
-        await wait(100);
-        return queryData;
-      });
+      cache.fetchQuery(
+        queryKey,
+        async () => {
+          await wait(100);
+          return queryData;
+        },
+        false
+      );
       expect(cache.data[queryKey]).toMatchObject({
         data: undefined,
         isLoading: true,
@@ -109,9 +114,13 @@ describe("cache", () => {
     it("should set query state to error if fetching fails", async () => {
       const cache = createCache();
       let error = new Error("error");
-      await cache.fetchQuery(queryKey, () => {
-        throw error;
-      });
+      await cache.fetchQuery(
+        queryKey,
+        () => {
+          throw error;
+        },
+        false
+      );
       expect(cache.data[queryKey]).toMatchObject({
         data: undefined,
         isLoading: false,
@@ -121,7 +130,7 @@ describe("cache", () => {
 
     it("should set query state after fetching", async () => {
       const cache = createCache();
-      await cache.fetchQuery(queryKey, () => queryData);
+      await cache.fetchQuery(queryKey, () => queryData, false);
       expect(cache.data[queryKey]).toMatchObject({
         data: queryData,
         isLoading: false,
@@ -131,12 +140,16 @@ describe("cache", () => {
 
     it("should not fetch query if it's already loading", async () => {
       const cache = createCache();
-      cache.fetchQuery(queryKey, async () => {
-        await wait(100);
-        return queryData;
-      });
+      cache.fetchQuery(
+        queryKey,
+        async () => {
+          await wait(100);
+          return queryData;
+        },
+        false
+      );
       const secondGetter = jest.fn();
-      await cache.fetchQuery(queryKey, async () => queryData);
+      await cache.fetchQuery(queryKey, async () => queryData, false);
       expect(cache.data[queryKey]).toMatchObject({
         data: undefined,
         isLoading: true,
@@ -149,9 +162,9 @@ describe("cache", () => {
       const cache = createCache({
         staleTime: 1000,
       });
-      await cache.fetchQuery(queryKey, () => queryData);
+      await cache.fetchQuery(queryKey, () => queryData, false);
       const secondGetter = jest.fn();
-      await cache.fetchQuery(queryKey, secondGetter);
+      await cache.fetchQuery(queryKey, secondGetter, false);
       expect(secondGetter).not.toHaveBeenCalled();
     });
 
@@ -159,11 +172,15 @@ describe("cache", () => {
       const cache = createCache({
         staleTime: 10,
       });
-      await cache.fetchQuery(queryKey, () => queryData);
+      await cache.fetchQuery(queryKey, () => queryData, false);
       await wait(15);
-      await cache.fetchQuery(queryKey, () => ({
-        username: "new",
-      }));
+      await cache.fetchQuery(
+        queryKey,
+        () => ({
+          username: "new",
+        }),
+        false
+      );
       expect(cache.data[queryKey]).toMatchObject({
         data: {
           username: "new",
@@ -171,6 +188,31 @@ describe("cache", () => {
         isLoading: false,
         error: undefined,
       });
+    });
+
+    it("should fetch query if it's forced even if it's loading", async () => {
+      const cache = createCache();
+      cache.fetchQuery(
+        queryKey,
+        async () => {
+          await wait(100);
+          return queryData;
+        },
+        false
+      );
+      const secondGetter = jest.fn();
+      await cache.fetchQuery(queryKey, secondGetter, true);
+      expect(secondGetter).toHaveBeenCalled();
+    });
+
+    it("should fetch query if it's forced even if it's not stale", async () => {
+      const cache = createCache({
+        staleTime: 1000,
+      });
+      await cache.fetchQuery(queryKey, () => queryData, false);
+      const secondGetter = jest.fn();
+      await cache.fetchQuery(queryKey, secondGetter, true);
+      expect(secondGetter).toHaveBeenCalled();
     });
   });
 
@@ -199,6 +241,17 @@ describe("cache", () => {
       cache.setQueryState(queryKey, { data: queryData });
       expect(callback).not.toHaveBeenCalled();
     });
+
+    it("should not break on error in listener", async () => {
+      const cache = createCache();
+      const callback = jest.fn(() => {
+        throw new Error("error");
+      });
+      cache.subscribe(queryKey, callback);
+      expect(() =>
+        cache.setQueryState(queryKey, { data: queryData }, true)
+      ).not.toThrowError();
+    });
   });
 
   describe("garbage collection", () => {
@@ -207,7 +260,7 @@ describe("cache", () => {
         cacheTime: 100,
         garbageCollectorInterval: 5,
       });
-      await cache.fetchQuery(queryKey, () => queryData);
+      await cache.fetchQuery(queryKey, () => queryData, false);
       await wait(150);
       expect(cache.data[queryKey]).toBeUndefined();
       cache.toggleGarbageCollector(false);
@@ -218,7 +271,7 @@ describe("cache", () => {
         cacheTime: 100,
         garbageCollectorInterval: 5,
       });
-      await cache.fetchQuery(queryKey, () => queryData);
+      await cache.fetchQuery(queryKey, () => queryData, false);
       await wait(50);
       expect(cache.data[queryKey]).toMatchObject({
         data: queryData,
@@ -233,7 +286,7 @@ describe("cache", () => {
         cacheTime: 0,
         garbageCollectorInterval: 5,
       });
-      await cache.fetchQuery(queryKey, () => queryData);
+      await cache.fetchQuery(queryKey, () => queryData, false);
       await wait(50);
       expect(cache.data[queryKey]).toMatchObject({
         data: queryData,
@@ -248,7 +301,7 @@ describe("cache", () => {
         cacheTime: 100,
         garbageCollectorInterval: 5,
       });
-      await cache.fetchQuery(queryKey, () => queryData);
+      await cache.fetchQuery(queryKey, () => queryData, false);
       cache.toggleGarbageCollector(false);
       await wait(150);
       expect(cache.data[queryKey]).toMatchObject({
@@ -263,7 +316,7 @@ describe("cache", () => {
         cacheTime: 100,
         garbageCollectorInterval: 5,
       });
-      await cache.fetchQuery(queryKey, () => queryData);
+      await cache.fetchQuery(queryKey, () => queryData, false);
       await wait(150);
       expect(cache.data[queryKey]).toBeUndefined();
       cache.toggleGarbageCollector(false);
@@ -276,7 +329,7 @@ describe("cache", () => {
       });
       const callback = jest.fn();
       cache.subscribe(queryKey, callback);
-      await cache.fetchQuery(queryKey, () => queryData);
+      await cache.fetchQuery(queryKey, () => queryData, false);
       await wait(150);
       expect(cache.data[queryKey]).toMatchObject({
         data: queryData,
@@ -287,9 +340,3 @@ describe("cache", () => {
     });
   });
 });
-
-function wait(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}

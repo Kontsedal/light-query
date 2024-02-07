@@ -26,7 +26,11 @@ export type Cache = {
   subscribe: (key: string, listener: () => void) => () => void;
   initQueryState: <T>(key: string) => QueryState<T>;
   getQueryState: <T>(key: string) => QueryState<T> | undefined;
-  fetchQuery: <T>(key: string, getter: () => Promise<T> | T) => Promise<void>;
+  fetchQuery: <T>(
+    key: string,
+    getter: () => Promise<T> | T,
+    forced: boolean
+  ) => Promise<void>;
   garbageCollectorInterval?: NodeJS.Timeout | undefined;
   toggleGarbageCollector: (enabled: boolean) => void;
 };
@@ -69,10 +73,9 @@ export const createCache = (options?: CreateCacheOptions) => {
       listeners.push(listener);
       return () => {
         let listeners = this.listeners[key];
-        if (!Array.isArray(listeners)) {
-          return;
+        if (Array.isArray(listeners)) {
+          this.listeners[key] = listeners.filter((l) => l !== listener);
         }
-        this.listeners[key] = listeners.filter((l) => l !== listener);
       };
     },
     initQueryState<T>(key: string) {
@@ -95,15 +98,20 @@ export const createCache = (options?: CreateCacheOptions) => {
       return result;
     },
 
-    async fetchQuery<T>(key: string, getter: () => Promise<T> | T) {
+    async fetchQuery<T>(
+      key: string,
+      getter: () => Promise<T> | T,
+      forced = false
+    ) {
       this.initQueryState(key);
-      const queryState = this.getQueryState<T>(key);
-      if (!queryState || queryState.isLoading) {
+      const queryState = this.getQueryState<T>(key) as QueryState<T>;
+      if (queryState.isLoading && !forced) {
         return;
       }
       if (
         queryState.lastFetchedAt &&
-        queryState.staleTime + queryState.lastFetchedAt > Date.now()
+        queryState.staleTime + queryState.lastFetchedAt > Date.now() &&
+        !forced
       ) {
         return;
       }
