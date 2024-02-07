@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { QueryState, Cache } from "./cache";
-import { pickIfDefined } from "./utils";
+import { addWindowListener, pickIfDefined } from "./utils";
 import { CacheContext } from "./context";
 
 export type UseQueryGetter<T> = () => Promise<T> | T;
@@ -11,6 +11,8 @@ export type UseQueryParams<T> = {
   refetchInterval?: UseQueryRefetchInterval<T>;
   cacheTime?: number;
   staleTime?: number;
+  refetchOnWindowFocus?: boolean;
+  refetchOnReconnect?: boolean;
 };
 
 export const useQuery = <T>(params: UseQueryParams<T>, forcedCache?: Cache) => {
@@ -42,11 +44,20 @@ export const useQuery = <T>(params: UseQueryParams<T>, forcedCache?: Cache) => {
       pickIfDefined(params, ["cacheTime", "staleTime"]),
       false
     );
+    const cleanups: (() => unknown)[] = [];
     const unsubscribe = cache.subscribe(params.key, syncState);
+    let forcedRefetch = fetchQuery.bind(null, true);
     fetchQuery(false).catch();
+    if (params.refetchOnWindowFocus || queryState.refetchOnWindowFocus) {
+      cleanups.push(addWindowListener("focus", forcedRefetch));
+    }
+    if (params.refetchOnReconnect || queryState.refetchOnReconnect) {
+      cleanups.push(addWindowListener("online", forcedRefetch));
+    }
     return () => {
       clearTimeout(refetchTimer.current);
       unsubscribe();
+      cleanups.forEach((cleanup) => cleanup());
     };
   }, [params.key]);
 

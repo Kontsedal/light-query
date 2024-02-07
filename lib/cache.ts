@@ -10,6 +10,8 @@ export type QueryState<T> = {
   staleTime: number;
   lastAccessedAt?: number;
   lastFetchedAt?: number;
+  refetchOnWindowFocus?: boolean;
+  refetchOnReconnect?: boolean;
 };
 export type Cache = {
   data: {
@@ -39,6 +41,8 @@ export type CreateCacheOptions = {
   staleTime?: number;
   cacheTime?: number;
   garbageCollectorInterval?: number;
+  refetchOnWindowFocus?: boolean;
+  refetchOnReconnect?: boolean;
 };
 export const createCache = (options?: CreateCacheOptions) => {
   const newCache: Cache = {
@@ -167,6 +171,8 @@ function getDefaultQueryState(options: CreateCacheOptions) {
     error: undefined,
     cacheTime: options.cacheTime ?? defaultCacheTime,
     staleTime: options.staleTime ?? defaultStaleTime,
+    refetchOnWindowFocus: options.refetchOnWindowFocus ?? false,
+    refetchOnReconnect: options.refetchOnReconnect ?? false,
   };
 }
 export const globalCache = createCache();
