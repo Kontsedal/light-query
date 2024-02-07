@@ -24,17 +24,19 @@ export type Cache = {
     notify?: boolean
   ) => void;
   subscribe: (key: string, listener: () => void) => () => void;
-  initQueryState: (key: string) => void;
+  initQueryState: <T>(key: string) => QueryState<T>;
   getQueryState: <T>(key: string) => QueryState<T> | undefined;
   fetchQuery: <T>(key: string, getter: () => Promise<T> | T) => Promise<void>;
   garbageCollectorInterval?: NodeJS.Timeout | undefined;
   toggleGarbageCollector: (enabled: boolean) => void;
 };
-export const createCache = (options?: {
+
+export type CreateCacheOptions = {
   staleTime?: number;
   cacheTime?: number;
   garbageCollectorInterval?: number;
-}) => {
+};
+export const createCache = (options?: CreateCacheOptions) => {
   const newCache: Cache = {
     data: {},
     listeners: {},
@@ -45,14 +47,7 @@ export const createCache = (options?: {
     ) {
       let state = this.data[key];
       if (!state) {
-        state = {
-          data: undefined,
-          isLoading: false,
-          error: undefined,
-          cacheTime: options?.cacheTime ?? defaultCacheTime,
-          staleTime: options?.staleTime ?? defaultStaleTime,
-        };
-        this.data[key] = state;
+        state = this.initQueryState(key);
       }
       this.data[key] = {
         ...state,
@@ -74,21 +69,17 @@ export const createCache = (options?: {
       listeners.push(listener);
       return () => {
         let listeners = this.listeners[key];
-        if (Array.isArray(listeners)) {
-          this.listeners[key] = listeners.filter((l) => l !== listener);
+        if (!Array.isArray(listeners)) {
+          return;
         }
+        this.listeners[key] = listeners.filter((l) => l !== listener);
       };
     },
-    initQueryState(key: string) {
+    initQueryState<T>(key: string) {
       if (!this.data[key]) {
-        this.data[key] = {
-          data: undefined,
-          isLoading: false,
-          error: undefined,
-          cacheTime: options?.cacheTime ?? defaultCacheTime,
-          staleTime: options?.staleTime ?? defaultStaleTime,
-        };
+        this.data[key] = getDefaultQueryState(options ?? {});
       }
+      return this.data[key] as QueryState<T>;
     },
     getQueryState<T>(key: string): QueryState<T> {
       const result = this.data[key] as QueryState<T>;
@@ -169,4 +160,14 @@ export const createCache = (options?: {
   newCache.toggleGarbageCollector(true);
   return newCache;
 };
+
+function getDefaultQueryState(options: CreateCacheOptions) {
+  return {
+    data: undefined,
+    isLoading: false,
+    error: undefined,
+    cacheTime: options.cacheTime ?? defaultCacheTime,
+    staleTime: options.staleTime ?? defaultStaleTime,
+  };
+}
 export const globalCache: Cache = createCache();
