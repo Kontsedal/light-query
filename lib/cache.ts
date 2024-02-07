@@ -14,27 +14,27 @@ export type QueryState<T> = {
   refetchOnReconnect?: boolean;
 };
 export type Cache = {
-  data: {
+  d: {
     [key: string]: QueryState<any>;
   };
-  listeners: {
+  l: {
     [key: string]: (() => void)[];
   };
-  setQueryState: <T>(
+  set: <T>(
     key: string,
     values: Partial<QueryState<T>>,
     notify?: boolean
   ) => void;
-  subscribe: (key: string, listener: () => void) => () => void;
-  initQueryState: <T>(key: string) => QueryState<T>;
-  getQueryState: <T>(key: string) => QueryState<T> | undefined;
-  fetchQuery: <T>(
+  sub: (key: string, listener: () => void) => () => void;
+  init: <T>(key: string) => QueryState<T>;
+  get: <T>(key: string) => QueryState<T> | undefined;
+  fetch: <T>(
     key: string,
     getter: () => Promise<T> | T,
     forced: boolean
   ) => Promise<void>;
-  garbageCollectorInterval?: NodeJS.Timeout | undefined;
-  toggleGarbageCollector: (enabled: boolean) => void;
+  gInt?: NodeJS.Timeout | undefined;
+  toggleGc: (enabled: boolean) => void;
 };
 
 export type CreateCacheOptions = {
@@ -46,43 +46,39 @@ export type CreateCacheOptions = {
 };
 export const createCache = (options?: CreateCacheOptions) => {
   const newCache: Cache = {
-    data: {},
-    listeners: {},
-    setQueryState<T>(
-      key: string,
-      values: Partial<QueryState<T>>,
-      notify = true
-    ) {
-      let state = this.data[key] ?? this.initQueryState(key);
-      this.data[key] = {
+    d: {},
+    l: {},
+    set<T>(key: string, values: Partial<QueryState<T>>, notify = true) {
+      let state = this.d[key] ?? this.init(key);
+      this.d[key] = {
         ...state,
         ...values,
       };
-      let listeners = this.listeners[key];
+      let listeners = this.l[key];
       if (notify && listeners?.length) {
         try {
           listeners.forEach((listener) => listener());
         } catch (e) {}
       }
     },
-    subscribe(key, listener) {
-      let listeners = this.listeners[key] ?? [];
-      this.listeners[key] = listeners;
+    sub(key, listener) {
+      let listeners = this.l[key] ?? [];
+      this.l[key] = listeners;
       listeners.push(listener);
       return () => {
-        this.listeners[key] = listeners.filter((l) => l !== listener);
+        this.l[key] = listeners.filter((l) => l !== listener);
       };
     },
-    initQueryState<T>(key: string) {
-      if (!this.data[key]) {
-        this.data[key] = getDefaultQueryState(options ?? {});
+    init<T>(key: string) {
+      if (!this.d[key]) {
+        this.d[key] = getDefaultQueryState(options ?? {});
       }
-      return this.data[key] as QueryState<T>;
+      return this.d[key] as QueryState<T>;
     },
-    getQueryState<T>(key: string): QueryState<T> {
-      const result = this.data[key] as QueryState<T>;
+    get<T>(key: string): QueryState<T> {
+      const result = this.d[key] as QueryState<T>;
       if (result) {
-        this.setQueryState(
+        this.set(
           key,
           {
             lastAccessedAt: Date.now(),
@@ -93,13 +89,9 @@ export const createCache = (options?: CreateCacheOptions) => {
       return result;
     },
 
-    async fetchQuery<T>(
-      key: string,
-      getter: () => Promise<T> | T,
-      forced = false
-    ) {
-      this.initQueryState(key);
-      const queryState = this.getQueryState<T>(key) as QueryState<T>;
+    async fetch<T>(key: string, getter: () => Promise<T> | T, forced = false) {
+      this.init(key);
+      const queryState = this.get<T>(key) as QueryState<T>;
       if (queryState.isLoading && !forced) {
         return;
       }
@@ -110,35 +102,35 @@ export const createCache = (options?: CreateCacheOptions) => {
       ) {
         return;
       }
-      this.setQueryState(key, {
+      this.set(key, {
         isLoading: true,
         error: undefined,
       });
       try {
         const result = await getter();
-        this.setQueryState(key, {
+        this.set(key, {
           data: result,
           isLoading: false,
           error: undefined,
           lastFetchedAt: Date.now(),
         });
       } catch (e) {
-        this.setQueryState(key, {
+        this.set(key, {
           isLoading: false,
           error: e as Error,
         });
       }
     },
-    garbageCollectorInterval: undefined,
-    toggleGarbageCollector(enabled: boolean) {
-      if (enabled && !this.garbageCollectorInterval) {
-        this.garbageCollectorInterval = setInterval(() => {
-          const queryKeys = Object.keys(this.data);
+    gInt: undefined,
+    toggleGc(enabled: boolean) {
+      if (enabled && !this.gInt) {
+        this.gInt = setInterval(() => {
+          const queryKeys = Object.keys(this.d);
           const now = Date.now();
 
           queryKeys.forEach((key) => {
-            let data = this.data[key] as QueryState<any>;
-            let listeners = this.listeners[key];
+            let data = this.d[key] as QueryState<any>;
+            let listeners = this.l[key];
             if (Array.isArray(listeners) && listeners.length > 0) {
               return;
             }
@@ -147,20 +139,20 @@ export const createCache = (options?: CreateCacheOptions) => {
               data.lastAccessedAt &&
               now - data.lastAccessedAt > data.cacheTime
             ) {
-              delete this.data[key];
-              delete this.listeners[key];
+              delete this.d[key];
+              delete this.l[key];
             }
           });
         }, options?.garbageCollectorInterval ?? defaultGarbageCollectorInterval);
       }
-      if (!enabled && this.garbageCollectorInterval) {
-        clearInterval(this.garbageCollectorInterval);
-        this.garbageCollectorInterval = undefined;
+      if (!enabled && this.gInt) {
+        clearInterval(this.gInt);
+        this.gInt = undefined;
       }
     },
   };
 
-  newCache.toggleGarbageCollector(true);
+  newCache.toggleGc(true);
   return newCache;
 };
 

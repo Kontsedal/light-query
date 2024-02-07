@@ -71,11 +71,11 @@ describe("useQuery", () => {
     });
   });
 
-  it("should return the same data if it's not stale", async () => {
+  it("should return the same d if it's not stale", async () => {
     const cache = createCache({
       staleTime: 5000,
     });
-    await cache.fetchQuery(queryKey, () => queryData, false);
+    await cache.fetch(queryKey, () => queryData, false);
     const { result } = renderHook(() =>
       useQuery(
         {
@@ -95,11 +95,11 @@ describe("useQuery", () => {
     });
   });
 
-  it("should return the new data if it's stale", async () => {
+  it("should return the new d if it's stale", async () => {
     const cache = createCache({
       staleTime: 10,
     });
-    await cache.fetchQuery(queryKey, () => queryData, false);
+    await cache.fetch(queryKey, () => queryData, false);
     await wait(15);
     const { result } = renderHook(() =>
       useQuery(
@@ -181,7 +181,7 @@ describe("useQuery", () => {
     expect(getter).toHaveBeenCalledTimes(1);
   });
 
-  it("should receive a previous data into the refetchInterval function", async () => {
+  it("should receive a previous d into the refetchInterval function", async () => {
     const getter = jest.fn(() => queryData);
     const refetchInterval = jest.fn(() => 10);
     const cache = createCache();
@@ -220,7 +220,7 @@ describe("useQuery", () => {
         cache
       )
     );
-    expect(cache.getQueryState(queryKey)).toMatchObject({
+    expect(cache.get(queryKey)).toMatchObject({
       cacheTime: 1000,
       staleTime: 500,
     });
