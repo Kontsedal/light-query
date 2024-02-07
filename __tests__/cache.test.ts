@@ -157,10 +157,10 @@ describe("cache", () => {
 
     it("should fetch query if it's stale", async () => {
       const cache = createCache({
-        staleTime: 100,
+        staleTime: 10,
       });
       await cache.fetchQuery(queryKey, () => queryData);
-      await wait(100);
+      await wait(15);
       await cache.fetchQuery(queryKey, () => ({
         username: "new",
       }));
@@ -171,6 +171,119 @@ describe("cache", () => {
         isLoading: false,
         error: undefined,
       });
+    });
+  });
+
+  describe("subscribe", () => {
+    it("should call callback when query state changes", () => {
+      const cache = createCache();
+      const callback = jest.fn();
+      cache.subscribe(queryKey, callback);
+      cache.setQueryState(queryKey, { data: queryData });
+      expect(callback).toHaveBeenCalled();
+    });
+
+    it("should not call callback when notify is false", () => {
+      const cache = createCache();
+      const callback = jest.fn();
+      cache.subscribe(queryKey, callback);
+      cache.setQueryState(queryKey, { data: queryData }, false);
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it("should unsubscribe", () => {
+      const cache = createCache();
+      const callback = jest.fn();
+      const unsubscribe = cache.subscribe(queryKey, callback);
+      unsubscribe();
+      cache.setQueryState(queryKey, { data: queryData });
+      expect(callback).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("garbage collection", () => {
+    it("should remove query state after cache time", async () => {
+      const cache = createCache({
+        cacheTime: 100,
+        garbageCollectorInterval: 5,
+      });
+      await cache.fetchQuery(queryKey, () => queryData);
+      await wait(150);
+      expect(cache.data[queryKey]).toBeUndefined();
+      cache.toggleGarbageCollector(false);
+    });
+
+    it("should not remove query state before cache time", async () => {
+      const cache = createCache({
+        cacheTime: 100,
+        garbageCollectorInterval: 5,
+      });
+      await cache.fetchQuery(queryKey, () => queryData);
+      await wait(50);
+      expect(cache.data[queryKey]).toMatchObject({
+        data: queryData,
+        isLoading: false,
+        error: undefined,
+      });
+      cache.toggleGarbageCollector(false);
+    });
+
+    it("should not remove query state if cache time is 0", async () => {
+      const cache = createCache({
+        cacheTime: 0,
+        garbageCollectorInterval: 5,
+      });
+      await cache.fetchQuery(queryKey, () => queryData);
+      await wait(50);
+      expect(cache.data[queryKey]).toMatchObject({
+        data: queryData,
+        isLoading: false,
+        error: undefined,
+      });
+      cache.toggleGarbageCollector(false);
+    });
+
+    it("should not remove query state if garbage collector is disabled", async () => {
+      const cache = createCache({
+        cacheTime: 100,
+        garbageCollectorInterval: 5,
+      });
+      await cache.fetchQuery(queryKey, () => queryData);
+      cache.toggleGarbageCollector(false);
+      await wait(150);
+      expect(cache.data[queryKey]).toMatchObject({
+        data: queryData,
+        isLoading: false,
+        error: undefined,
+      });
+    });
+
+    it("should remove query state after cache time", async () => {
+      const cache = createCache({
+        cacheTime: 100,
+        garbageCollectorInterval: 5,
+      });
+      await cache.fetchQuery(queryKey, () => queryData);
+      await wait(150);
+      expect(cache.data[queryKey]).toBeUndefined();
+      cache.toggleGarbageCollector(false);
+    });
+
+    it("should not remove query state if there are active subscriptions", async () => {
+      const cache = createCache({
+        cacheTime: 100,
+        garbageCollectorInterval: 5,
+      });
+      const callback = jest.fn();
+      cache.subscribe(queryKey, callback);
+      await cache.fetchQuery(queryKey, () => queryData);
+      await wait(150);
+      expect(cache.data[queryKey]).toMatchObject({
+        data: queryData,
+        isLoading: false,
+        error: undefined,
+      });
+      cache.toggleGarbageCollector(false);
     });
   });
 });

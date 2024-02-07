@@ -1,4 +1,3 @@
-const logPrefix = 'light-query:::';
 const defaultGarbageCollectorInterval = 500;
 const defaultCacheTime = 1000 * 60 * 5;
 const defaultStaleTime = 0;
@@ -63,9 +62,7 @@ export const createCache = (options?: {
       if (notify && Array.isArray(listeners)) {
         try {
           listeners.forEach((listener) => listener());
-        } catch (e) {
-          console.error(logPrefix, 'Error in listener', e);
-        }
+        } catch (e) {}
       }
     },
     subscribe(key, listener) {
@@ -143,14 +140,11 @@ export const createCache = (options?: {
     toggleGarbageCollector(enabled: boolean) {
       if (enabled && !this.garbageCollectorInterval) {
         this.garbageCollectorInterval = setInterval(() => {
-          const listenerKeys = Object.keys(this.listeners);
+          const queryKeys = Object.keys(this.data);
           const now = Date.now();
 
-          listenerKeys.forEach((key) => {
-            let data = this.data[key];
-            if (!data) {
-              return;
-            }
+          queryKeys.forEach((key) => {
+            let data = this.data[key] as QueryState<any>;
             let listeners = this.listeners[key];
             if (Array.isArray(listeners) && listeners.length > 0) {
               return;
@@ -161,6 +155,7 @@ export const createCache = (options?: {
               now - data.lastAccessedAt > data.cacheTime
             ) {
               delete this.data[key];
+              delete this.listeners[key];
             }
           });
         }, options?.garbageCollectorInterval ?? defaultGarbageCollectorInterval);
