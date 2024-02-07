@@ -74,10 +74,9 @@ export const createCache = (options?: {
       listeners.push(listener);
       return () => {
         let listeners = this.listeners[key];
-        if (!Array.isArray(listeners)) {
-          return;
+        if (Array.isArray(listeners)) {
+          this.listeners[key] = listeners.filter((l) => l !== listener);
         }
-        this.listeners[key] = listeners.filter((l) => l !== listener);
       };
     },
     initQueryState(key: string) {
