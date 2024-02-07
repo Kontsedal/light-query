@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { globalCache, QueryState } from './cache';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { globalCache, QueryState } from "./cache";
 
 export type UseQueryGetter<T> = () => Promise<T> | T;
 export type UseQueryRefetchInterval<T> =
@@ -14,7 +14,7 @@ export type UseQueryParams<T> = {
 };
 
 export const useQuery = <T>(params: UseQueryParams<T>, cache = globalCache) => {
-  const initialQueryState = useRef(cache.getQueryParams<T>(params.key));
+  const initialQueryState = useRef(cache.getQueryState<T>(params.key));
   const [data, setData] = useState<T | undefined>(
     initialQueryState.current?.data
   );
@@ -25,7 +25,7 @@ export const useQuery = <T>(params: UseQueryParams<T>, cache = globalCache) => {
     initialQueryState.current?.error ?? undefined
   );
   const syncQueryState = useCallback((key: string) => {
-    const queryState = cache.getQueryParams<T>(key);
+    const queryState = cache.getQueryState<T>(key);
     if (!queryState) {
       return;
     }
@@ -42,14 +42,14 @@ export const useQuery = <T>(params: UseQueryParams<T>, cache = globalCache) => {
       refetchInterval?: UseQueryRefetchInterval<T>
     ) => {
       await cache.fetchQuery(key, getter);
-      const queryState = cache.getQueryParams<T>(key);
+      const queryState = cache.getQueryState<T>(key);
       if (!queryState) {
         return;
       }
       const { data } = queryState;
       if (refetchInterval) {
         const interval =
-          typeof refetchInterval === 'number'
+          typeof refetchInterval === "number"
             ? refetchInterval
             : refetchInterval(data);
         refetchTimer.current = setTimeout(() => {
@@ -67,9 +67,9 @@ export const useQuery = <T>(params: UseQueryParams<T>, cache = globalCache) => {
     if (params.staleTime) {
       queryParams.staleTime = params.staleTime;
     }
-    cache.initQueryParams(params.key);
+    cache.initQueryState(params.key);
     if (Object.keys(queryParams).length > 0) {
-      cache.setQueryParams(params.key, queryParams, false);
+      cache.setQueryState(params.key, queryParams, false);
     }
     syncQueryState(params.key);
     const unsubscribe = cache.subscribe(params.key, () => {

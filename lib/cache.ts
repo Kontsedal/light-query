@@ -19,14 +19,14 @@ export type Cache = {
   listeners: {
     [key: string]: (() => void)[];
   };
-  setQueryParams: <T>(
+  setQueryState: <T>(
     key: string,
     values: Partial<QueryState<T>>,
     notify?: boolean
   ) => void;
   subscribe: (key: string, listener: () => void) => () => void;
-  initQueryParams: (key: string) => void;
-  getQueryParams: <T>(key: string) => QueryState<T> | undefined;
+  initQueryState: (key: string) => void;
+  getQueryState: <T>(key: string) => QueryState<T> | undefined;
   fetchQuery: <T>(key: string, getter: () => Promise<T> | T) => Promise<void>;
   garbageCollectorInterval?: NodeJS.Timeout | undefined;
   toggleGarbageCollector: (enabled: boolean) => void;
@@ -39,7 +39,7 @@ export const createCache = (options?: {
   const newCache: Cache = {
     data: {},
     listeners: {},
-    setQueryParams<T>(
+    setQueryState<T>(
       key: string,
       values: Partial<QueryState<T>>,
       notify = true
@@ -83,7 +83,7 @@ export const createCache = (options?: {
         this.listeners[key] = listeners.filter((l) => l !== listener);
       };
     },
-    initQueryParams(key: string) {
+    initQueryState(key: string) {
       if (!this.data[key]) {
         this.data[key] = {
           data: undefined,
@@ -94,10 +94,10 @@ export const createCache = (options?: {
         };
       }
     },
-    getQueryParams<T>(key: string): QueryState<T> {
+    getQueryState<T>(key: string): QueryState<T> {
       const result = this.data[key] as QueryState<T>;
       if (result) {
-        this.setQueryParams(
+        this.setQueryState(
           key,
           {
             lastAccessedAt: Date.now(),
@@ -109,8 +109,8 @@ export const createCache = (options?: {
     },
 
     async fetchQuery<T>(key: string, getter: () => Promise<T> | T) {
-      this.initQueryParams(key);
-      const queryState = this.getQueryParams<T>(key);
+      this.initQueryState(key);
+      const queryState = this.getQueryState<T>(key);
       if (!queryState || queryState.isLoading) {
         return;
       }
@@ -120,20 +120,20 @@ export const createCache = (options?: {
       ) {
         return;
       }
-      this.setQueryParams(key, {
+      this.setQueryState(key, {
         isLoading: true,
         error: undefined,
       });
       try {
         const result = await getter();
-        this.setQueryParams(key, {
+        this.setQueryState(key, {
           data: result,
           isLoading: false,
           error: undefined,
           lastFetchedAt: Date.now(),
         });
       } catch (e) {
-        this.setQueryParams(key, {
+        this.setQueryState(key, {
           isLoading: false,
           error: e as Error,
         });
