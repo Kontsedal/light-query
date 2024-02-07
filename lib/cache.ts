@@ -49,33 +49,24 @@ export const createCache = (options?: CreateCacheOptions) => {
       values: Partial<QueryState<T>>,
       notify = true
     ) {
-      let state = this.data[key];
-      if (!state) {
-        state = this.initQueryState(key);
-      }
+      let state = this.data[key] ?? this.initQueryState(key);
       this.data[key] = {
         ...state,
         ...values,
       };
       let listeners = this.listeners[key];
-      if (notify && Array.isArray(listeners)) {
+      if (notify && listeners?.length) {
         try {
           listeners.forEach((listener) => listener());
         } catch (e) {}
       }
     },
     subscribe(key, listener) {
-      let listeners = this.listeners[key];
-      if (!listeners) {
-        listeners = [];
-        this.listeners[key] = listeners;
-      }
+      let listeners = this.listeners[key] ?? [];
+      this.listeners[key] = listeners;
       listeners.push(listener);
       return () => {
-        let listeners = this.listeners[key];
-        if (Array.isArray(listeners)) {
-          this.listeners[key] = listeners.filter((l) => l !== listener);
-        }
+        this.listeners[key] = listeners.filter((l) => l !== listener);
       };
     },
     initQueryState<T>(key: string) {
