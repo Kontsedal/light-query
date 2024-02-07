@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { globalCache, QueryState } from "./cache";
+import { pickIfDefined } from "./utils";
 
 export type UseQueryGetter<T> = () => Promise<T> | T;
-export type UseQueryRefetchInterval<T> =
-  | number
-  | ((latestData: T | undefined) => number);
+export type UseQueryRefetchInterval<T> = number | ((latestData?: T) => number);
 export type UseQueryParams<T> = {
   key: string;
   getter: UseQueryGetter<T>;
@@ -14,82 +13,42 @@ export type UseQueryParams<T> = {
 };
 
 export const useQuery = <T>(params: UseQueryParams<T>, cache = globalCache) => {
-  const initialQueryState = useRef(cache.getQueryState<T>(params.key));
-  const [data, setData] = useState<T | undefined>(
-    initialQueryState.current?.data
+  const [queryState, setQueryState] = useState(
+    cache.getQueryState(params.key) ?? cache.initQueryState(params.key)
   );
-  const [isLoading, setIsLoading] = useState(
-    initialQueryState.current?.isLoading ?? false
-  );
-  const [error, setError] = useState<unknown | undefined>(
-    initialQueryState.current?.error ?? undefined
-  );
-  const syncQueryState = useCallback((key: string) => {
-    const queryState = cache.getQueryState<T>(key);
-    if (!queryState) {
-      return;
-    }
-    const { data, isLoading, error } = queryState;
-    setData(data);
-    setIsLoading(isLoading);
-    setError(error);
-  }, []);
-  const refetchTimer = useRef<NodeJS.Timeout | undefined>(undefined);
-  const fetchQuery = useCallback(
-    async (
-      key: string,
-      getter: UseQueryGetter<T>,
-      force: boolean,
-      refetchInterval?: UseQueryRefetchInterval<T>
-    ) => {
-      await cache.fetchQuery(key, getter, force);
-      if (refetchInterval) {
-        const queryState = cache.getQueryState<T>(key);
-        const interval =
-          typeof refetchInterval === "number"
-            ? refetchInterval
-            : refetchInterval(queryState?.data);
-        if (typeof interval !== "number" || interval <= 0) {
-          return;
-        }
-        refetchTimer.current = setTimeout(() => {
-          fetchQuery(key, getter, true, refetchInterval);
-        }, interval);
+  const refetchTimer = useRef<NodeJS.Timeout>();
+  const syncState = () => {
+    setQueryState(cache.getQueryState(params.key) as QueryState<T>);
+  };
+  const fetchQuery = async (force: boolean) => {
+    await cache.fetchQuery(params.key, params.getter, force);
+    if (params.refetchInterval) {
+      const interval =
+        typeof params.refetchInterval === "number"
+          ? params.refetchInterval
+          : params.refetchInterval(cache.getQueryState<T>(params.key)?.data);
+      if (interval > 0) {
+        refetchTimer.current = setTimeout(() => fetchQuery(true), interval);
       }
-    },
-    [params.key, params.getter, params.refetchInterval]
-  );
+    }
+  };
+
   useEffect(() => {
-    const queryParams: Partial<QueryState<T>> = {};
-    if (params.cacheTime) {
-      queryParams.cacheTime = params.cacheTime;
-    }
-    if (params.staleTime) {
-      queryParams.staleTime = params.staleTime;
-    }
-    if (Object.keys(queryParams).length > 0) {
-      cache.setQueryState(params.key, queryParams, false);
-    }
-    syncQueryState(params.key);
-    const unsubscribe = cache.subscribe(params.key, () => {
-      syncQueryState(params.key);
-    });
-    fetchQuery(params.key, params.getter, false, params.refetchInterval);
+    cache.setQueryState(
+      params.key,
+      pickIfDefined(params, ["cacheTime", "staleTime"]),
+      false
+    );
+    const unsubscribe = cache.subscribe(params.key, syncState);
+    fetchQuery(false).catch();
     return () => {
-      if (refetchTimer.current) {
-        clearTimeout(refetchTimer.current);
-      }
+      clearTimeout(refetchTimer.current);
       unsubscribe();
     };
   }, [params.key]);
-  return useMemo(
-    () => ({
-      data,
-      isLoading,
-      error,
-      refetch: () =>
-        fetchQuery(params.key, params.getter, true, params.refetchInterval),
-    }),
-    [data, isLoading, error, params.key]
-  );
+
+  return {
+    ...queryState,
+    refetch: () => fetchQuery(true),
+  };
 };
