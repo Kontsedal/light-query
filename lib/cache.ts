@@ -169,4 +169,4 @@ function getDefaultQueryState(options: CreateCacheOptions) {
     staleTime: options.staleTime ?? defaultStaleTime,
   };
 }
-export const globalCache: Cache = createCache();
+export const globalCache = createCache();

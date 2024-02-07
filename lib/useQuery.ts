@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { globalCache, QueryState } from "./cache";
+import { useContext, useEffect, useRef, useState } from "react";
+import { QueryState, Cache } from "./cache";
 import { pickIfDefined } from "./utils";
+import { CacheContext } from "./context";
 
 export type UseQueryGetter<T> = () => Promise<T> | T;
 export type UseQueryRefetchInterval<T> = number | ((latestData?: T) => number);
@@ -12,7 +13,9 @@ export type UseQueryParams<T> = {
   staleTime?: number;
 };
 
-export const useQuery = <T>(params: UseQueryParams<T>, cache = globalCache) => {
+export const useQuery = <T>(params: UseQueryParams<T>, forcedCache?: Cache) => {
+  const contextCache = useContext(CacheContext);
+  const cache = forcedCache || contextCache;
   const [queryState, setQueryState] = useState(
     cache.getQueryState(params.key) ?? cache.initQueryState(params.key)
   );
