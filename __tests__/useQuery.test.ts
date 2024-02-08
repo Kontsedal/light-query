@@ -141,21 +141,6 @@ describe("useQuery", () => {
 
   it("should refetch the query after the interval", async () => {
     const getter = jest.fn(() => queryData);
-    const cache = createCache();
-    renderHook(() =>
-      useQuery(queryKey, getter, {
-        refetchInterval: 10,
-        cache,
-      })
-    );
-    await act(async () => {
-      await wait(25);
-    });
-    expect(getter).toHaveBeenCalledTimes(3);
-  });
-
-  it("should support refetchInterval as a function", async () => {
-    const getter = jest.fn(() => queryData);
     const refetchInterval = jest.fn(() => 10);
     const cache = createCache();
     renderHook(() =>

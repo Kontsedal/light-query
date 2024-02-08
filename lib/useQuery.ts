@@ -4,7 +4,9 @@ import { addWindowListener, pickIfDefined } from "./utils";
 import { CacheContext } from "./context";
 
 export type UseQueryGetter<T> = () => Promise<T> | T;
-export type UseQueryRefetchInterval<T> = number | ((latestData?: T) => number);
+export type UseQueryRefetchInterval<T> = (
+  latestData?: T
+) => number | Promise<number>;
 export type UseOptions<T> = {
   refetchInterval?: UseQueryRefetchInterval<T>;
   cacheTime?: number;
@@ -31,10 +33,7 @@ export const useQuery = <T>(
   const fetchQuery = async (force: boolean) => {
     await cache.fetch(key, fetchFn, force);
     if (params?.refetchInterval) {
-      const interval =
-        typeof params.refetchInterval === "number"
-          ? params.refetchInterval
-          : params.refetchInterval(cache.get<T>(key)?.data);
+      const interval = await params.refetchInterval(cache.get<T>(key)?.data);
       if (interval > 0) {
         refetchTimer.current = setTimeout(() => fetchQuery(true), interval);
       }
