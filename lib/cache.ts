@@ -1,50 +1,8 @@
 const defaultGarbageCollectorInterval = 500;
 const defaultCacheTime = 1000 * 60 * 5;
 const defaultStaleTime = 0;
-
-export type QueryState<T> = {
-  data: T | undefined;
-  isLoading: boolean;
-  error: unknown | undefined;
-  cacheTime: number;
-  staleTime: number;
-  lastAccessedAt?: number;
-  lastFetchedAt?: number;
-  refetchOnWindowFocus?: boolean;
-  refetchOnReconnect?: boolean;
-};
-export type Cache = {
-  d: {
-    [key: string]: QueryState<any>;
-  };
-  l: {
-    [key: string]: (() => void)[];
-  };
-  set: <T>(
-    key: string,
-    values: Partial<QueryState<T>>,
-    notify?: boolean
-  ) => void;
-  sub: (key: string, listener: () => void) => () => void;
-  init: <T>(key: string) => QueryState<T>;
-  get: <T>(key: string) => QueryState<T> | undefined;
-  fetch: <T>(
-    key: string,
-    getter: () => Promise<T> | T,
-    forced: boolean,
-    setError: boolean
-  ) => Promise<{ error?: unknown; data?: T }>;
-  gInt?: NodeJS.Timeout | undefined;
-  toggleGc: (enabled: boolean) => void;
-};
-
-export type CreateCacheOptions = {
-  staleTime?: number;
-  cacheTime?: number;
-  garbageCollectorInterval?: number;
-  refetchOnWindowFocus?: boolean;
-  refetchOnReconnect?: boolean;
-};
+const defaultRefetchOnWindowFocus = false;
+const defaultRefetchOnReconnect = false;
 export const createCache = (options?: CreateCacheOptions) => {
   const newCache: Cache = {
     d: {},
@@ -173,8 +131,53 @@ function getDefaultQueryState(options: CreateCacheOptions) {
     error: undefined,
     cacheTime: options.cacheTime ?? defaultCacheTime,
     staleTime: options.staleTime ?? defaultStaleTime,
-    refetchOnWindowFocus: options.refetchOnWindowFocus ?? false,
-    refetchOnReconnect: options.refetchOnReconnect ?? false,
+    refetchOnWindowFocus:
+      options.refetchOnWindowFocus ?? defaultRefetchOnWindowFocus,
+    refetchOnReconnect: options.refetchOnReconnect ?? defaultRefetchOnReconnect,
   };
 }
 export const globalCache = createCache();
+
+export type QueryState<T> = {
+  data: T | undefined;
+  isLoading: boolean;
+  error: unknown | undefined;
+  cacheTime: number;
+  staleTime: number;
+  lastAccessedAt?: number;
+  lastFetchedAt?: number;
+  refetchOnWindowFocus?: boolean;
+  refetchOnReconnect?: boolean;
+};
+export type Cache = {
+  d: {
+    [key: string]: QueryState<any>;
+  };
+  l: {
+    [key: string]: (() => void)[];
+  };
+  set: <T>(
+    key: string,
+    values: Partial<QueryState<T>>,
+    notify?: boolean
+  ) => void;
+  sub: (key: string, listener: () => void) => () => void;
+  init: <T>(key: string) => QueryState<T>;
+  get: <T>(key: string) => QueryState<T> | undefined;
+  fetch: <T>(
+    key: string,
+    getter: () => Promise<T> | T,
+    forced: boolean,
+    setError: boolean
+  ) => Promise<{ error?: unknown; data?: T }>;
+  gInt?: NodeJS.Timeout | undefined;
+  toggleGc: (enabled: boolean) => void;
+};
+
+export type CreateCacheOptions = {
+  staleTime?: number;
+  cacheTime?: number;
+  garbageCollectorInterval?: number;
+  refetchOnWindowFocus?: boolean;
+  refetchOnReconnect?: boolean;
+};

@@ -1,26 +1,12 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { QueryState, Cache } from "./cache";
-import { addWindowListener, isUndefined, pickIfDefined } from "./utils";
+import {
+  addWindowListener,
+  isFunction,
+  isUndefined,
+  pickIfDefined,
+} from "./utils";
 import { CacheContext } from "./context";
-
-export type UseQueryGetter<T> = () => Promise<T> | T;
-export type UseQueryRefetchInterval<T> = (
-  latestData?: T
-) => number | Promise<number>;
-export type RetryFn<T> = (
-  attempt: number,
-  error: unknown,
-  latestData?: QueryState<T>
-) => number | Promise<number>;
-export type UseOptions<T> = {
-  refetchInterval?: UseQueryRefetchInterval<T>;
-  cacheTime?: number;
-  staleTime?: number;
-  refetchOnWindowFocus?: boolean;
-  refetchOnReconnect?: boolean;
-  cache?: Cache;
-  retry?: RetryFn<T>;
-};
 
 export const useQuery = <T>(
   key: string,
@@ -33,6 +19,7 @@ export const useQuery = <T>(
     cache.get(key) ?? cache.init(key)
   );
   const refetchTimer = useRef<NodeJS.Timeout>();
+  const mounted = useRef(true);
   const syncState = () => {
     setQueryState(cache.get(key) as QueryState<T>);
   };
@@ -41,6 +28,9 @@ export const useQuery = <T>(
     let attempt = 0;
     let retryInterval = 0;
     do {
+      if (!mounted.current) {
+        return;
+      }
       attempt++;
       retryInterval = await retryFn(attempt, error, cache.get<T>(key));
       if (retryInterval > 0) {
@@ -72,25 +62,26 @@ export const useQuery = <T>(
   };
 
   useEffect(() => {
+    mounted.current = true;
     cache.set(
       key,
       pickIfDefined(params || {}, ["cacheTime", "staleTime"]),
       false
     );
-    const cleanups: (() => unknown)[] = [];
-    const unsubscribe = cache.sub(key, syncState);
     let forcedRefetch = fetchQuery.bind(null, true);
+    const cleanups: ((() => unknown) | boolean | undefined)[] = [
+      (params?.refetchOnWindowFocus ?? queryState.refetchOnWindowFocus) &&
+        addWindowListener("focus", forcedRefetch),
+      (params?.refetchOnReconnect ?? queryState.refetchOnReconnect) &&
+        addWindowListener("online", forcedRefetch),
+    ];
+    const unsubscribe = cache.sub(key, syncState);
     fetchQuery(false).catch();
-    if (params?.refetchOnWindowFocus ?? queryState.refetchOnWindowFocus) {
-      cleanups.push(addWindowListener("focus", forcedRefetch));
-    }
-    if (params?.refetchOnReconnect ?? queryState.refetchOnReconnect) {
-      cleanups.push(addWindowListener("online", forcedRefetch));
-    }
     return () => {
       clearTimeout(refetchTimer.current);
       unsubscribe();
-      cleanups.forEach((cleanup) => cleanup());
+      cleanups.filter(isFunction).forEach((cleanup) => cleanup());
+      mounted.current = false;
     };
   }, [key]);
 
@@ -98,4 +89,23 @@ export const useQuery = <T>(
     ...queryState,
     refetch: () => fetchQuery(true),
   };
+};
+
+export type UseQueryGetter<T> = () => Promise<T> | T;
+export type UseQueryRefetchInterval<T> = (
+  latestData?: T
+) => number | Promise<number>;
+export type RetryFn<T> = (
+  attempt: number,
+  error: unknown,
+  latestData?: QueryState<T>
+) => number | Promise<number>;
+export type UseOptions<T> = {
+  refetchInterval?: UseQueryRefetchInterval<T>;
+  cacheTime?: number;
+  staleTime?: number;
+  refetchOnWindowFocus?: boolean;
+  refetchOnReconnect?: boolean;
+  cache?: Cache;
+  retry?: RetryFn<T>;
 };
