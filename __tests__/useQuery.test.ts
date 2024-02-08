@@ -94,7 +94,7 @@ describe("useQuery", () => {
     const cache = createCache({
       staleTime: 5000,
     });
-    await cache.fetch(queryKey, () => queryData, false);
+    await cache.fetch(queryKey, () => queryData, false, true);
     const { result } = renderHook(() =>
       useQuery(
         queryKey,
@@ -118,7 +118,7 @@ describe("useQuery", () => {
     const cache = createCache({
       staleTime: 10,
     });
-    await cache.fetch(queryKey, () => queryData, false);
+    await cache.fetch(queryKey, () => queryData, false, true);
     await wait(15);
     const { result } = renderHook(() =>
       useQuery(
@@ -171,7 +171,7 @@ describe("useQuery", () => {
     expect(getter).toHaveBeenCalledTimes(1);
   });
 
-  it("should receive a previous d into the refetchInterval function", async () => {
+  it("should receive a previous data into the refetchInterval function", async () => {
     const getter = jest.fn(() => queryData);
     const refetchInterval = jest.fn(() => 10);
     const cache = createCache();
@@ -321,6 +321,95 @@ describe("useQuery", () => {
         window.dispatchEvent(new Event("online"));
       });
       expect(getter).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("retry", () => {
+    it("should not retry if the retry function returns 0", async () => {
+      let error = new Error("error");
+      const getter = jest.fn(() => {
+        throw error;
+      });
+      const cache = createCache();
+      const { result } = renderHook(() =>
+        useQuery(queryKey, getter, {
+          retry: () => 0,
+          cache,
+        })
+      );
+      await act(async () => {
+        await wait(50);
+      });
+      expect(getter).toHaveBeenCalledTimes(1);
+      expect(result.current).toMatchObject({
+        data: undefined,
+        isLoading: false,
+        error: error,
+      });
+    });
+
+    it("should retry if the retry function returns a positive number", async () => {
+      let error = new Error("error");
+      const getter = jest.fn(() => {
+        throw error;
+      });
+      const cache = createCache();
+      const { result } = renderHook(() =>
+        useQuery(queryKey, getter, {
+          retry: (attempt) => (attempt === 1 ? 10 : 0),
+          cache,
+        })
+      );
+      await act(async () => {
+        await wait(50);
+      });
+      expect(getter).toHaveBeenCalledTimes(2);
+      expect(result.current).toMatchObject({
+        data: undefined,
+        isLoading: false,
+        error: error,
+      });
+    });
+
+    it("should not set error during retry", async () => {
+      let error = new Error("error");
+      const getter = jest.fn(() => {
+        throw error;
+      });
+      const cache = createCache();
+      const { result } = renderHook(() =>
+        useQuery(queryKey, getter, {
+          retry: () => 100,
+          cache,
+        })
+      );
+      await act(async () => {
+        await wait(50);
+      });
+      expect(result.current).toMatchObject({
+        data: undefined,
+        isLoading: true,
+        error: undefined,
+      });
+    });
+
+    it("should not refetch on interval during retry", async () => {
+      let error = new Error("error");
+      const getter = jest.fn(() => {
+        throw error;
+      });
+      const cache = createCache();
+      renderHook(() =>
+        useQuery(queryKey, getter, {
+          retry: () => 100,
+          refetchInterval: () => 100,
+          cache,
+        })
+      );
+      await act(async () => {
+        await wait(90);
+      });
+      expect(getter).toHaveBeenCalledTimes(1);
     });
   });
 });

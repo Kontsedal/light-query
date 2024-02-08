@@ -11,3 +11,6 @@ export const addWindowListener = (event: string, listener: EventListener) => {
   window.addEventListener(event, listener);
   return () => window.removeEventListener(event, listener);
 };
+
+export const isUndefined = (value: unknown): value is undefined =>
+  typeof value === "undefined";

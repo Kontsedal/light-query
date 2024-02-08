@@ -96,7 +96,7 @@ describe("cache", () => {
     it("should fetch query without errors", async () => {
       const cache = createCache();
       expect(async () => {
-        await cache.fetch(queryKey, () => queryData, false);
+        await cache.fetch(queryKey, () => queryData, false, true);
       }).not.toThrow();
     });
 
@@ -108,7 +108,8 @@ describe("cache", () => {
           await wait(100);
           return queryData;
         },
-        false
+        false,
+        true
       );
       expect(cache.d[queryKey]).toMatchObject({
         data: undefined,
@@ -125,7 +126,8 @@ describe("cache", () => {
         () => {
           throw error;
         },
-        false
+        false,
+        true
       );
       expect(cache.d[queryKey]).toMatchObject({
         data: undefined,
@@ -136,7 +138,7 @@ describe("cache", () => {
 
     it("should set query state after fetching", async () => {
       const cache = createCache();
-      await cache.fetch(queryKey, () => queryData, false);
+      await cache.fetch(queryKey, () => queryData, false, true);
       expect(cache.d[queryKey]).toMatchObject({
         data: queryData,
         isLoading: false,
@@ -152,10 +154,11 @@ describe("cache", () => {
           await wait(100);
           return queryData;
         },
-        false
+        false,
+        true
       );
       const secondGetter = jest.fn();
-      await cache.fetch(queryKey, async () => queryData, false);
+      await cache.fetch(queryKey, async () => queryData, false, true);
       expect(cache.d[queryKey]).toMatchObject({
         data: undefined,
         isLoading: true,
@@ -168,9 +171,9 @@ describe("cache", () => {
       const cache = createCache({
         staleTime: 1000,
       });
-      await cache.fetch(queryKey, () => queryData, false);
+      await cache.fetch(queryKey, () => queryData, false, true);
       const secondGetter = jest.fn();
-      await cache.fetch(queryKey, secondGetter, false);
+      await cache.fetch(queryKey, secondGetter, false, true);
       expect(secondGetter).not.toHaveBeenCalled();
     });
 
@@ -178,14 +181,15 @@ describe("cache", () => {
       const cache = createCache({
         staleTime: 10,
       });
-      await cache.fetch(queryKey, () => queryData, false);
+      await cache.fetch(queryKey, () => queryData, false, true);
       await wait(15);
       await cache.fetch(
         queryKey,
         () => ({
           username: "new",
         }),
-        false
+        false,
+        true
       );
       expect(cache.d[queryKey]).toMatchObject({
         data: {
@@ -204,10 +208,11 @@ describe("cache", () => {
           await wait(100);
           return queryData;
         },
-        false
+        false,
+        true
       );
       const secondGetter = jest.fn();
-      await cache.fetch(queryKey, secondGetter, true);
+      await cache.fetch(queryKey, secondGetter, true, true);
       expect(secondGetter).toHaveBeenCalled();
     });
 
@@ -215,9 +220,9 @@ describe("cache", () => {
       const cache = createCache({
         staleTime: 1000,
       });
-      await cache.fetch(queryKey, () => queryData, false);
+      await cache.fetch(queryKey, () => queryData, false, true);
       const secondGetter = jest.fn();
-      await cache.fetch(queryKey, secondGetter, true);
+      await cache.fetch(queryKey, secondGetter, true, true);
       expect(secondGetter).toHaveBeenCalled();
     });
   });
@@ -266,7 +271,7 @@ describe("cache", () => {
         cacheTime: 100,
         garbageCollectorInterval: 5,
       });
-      await cache.fetch(queryKey, () => queryData, false);
+      await cache.fetch(queryKey, () => queryData, false, true);
       await wait(150);
       expect(cache.d[queryKey]).toBeUndefined();
       cache.toggleGc(false);
@@ -277,7 +282,7 @@ describe("cache", () => {
         cacheTime: 100,
         garbageCollectorInterval: 5,
       });
-      await cache.fetch(queryKey, () => queryData, false);
+      await cache.fetch(queryKey, () => queryData, false, true);
       await wait(50);
       expect(cache.d[queryKey]).toMatchObject({
         data: queryData,
@@ -292,7 +297,7 @@ describe("cache", () => {
         cacheTime: 0,
         garbageCollectorInterval: 5,
       });
-      await cache.fetch(queryKey, () => queryData, false);
+      await cache.fetch(queryKey, () => queryData, false, true);
       await wait(50);
       expect(cache.d[queryKey]).toMatchObject({
         data: queryData,
@@ -307,7 +312,7 @@ describe("cache", () => {
         cacheTime: 100,
         garbageCollectorInterval: 5,
       });
-      await cache.fetch(queryKey, () => queryData, false);
+      await cache.fetch(queryKey, () => queryData, false, true);
       cache.toggleGc(false);
       await wait(150);
       expect(cache.d[queryKey]).toMatchObject({
@@ -322,7 +327,7 @@ describe("cache", () => {
         cacheTime: 100,
         garbageCollectorInterval: 5,
       });
-      await cache.fetch(queryKey, () => queryData, false);
+      await cache.fetch(queryKey, () => queryData, false, true);
       await wait(150);
       expect(cache.d[queryKey]).toBeUndefined();
       cache.toggleGc(false);
@@ -335,7 +340,7 @@ describe("cache", () => {
       });
       const callback = jest.fn();
       cache.sub(queryKey, callback);
-      await cache.fetch(queryKey, () => queryData, false);
+      await cache.fetch(queryKey, () => queryData, false, true);
       await wait(150);
       expect(cache.d[queryKey]).toMatchObject({
         data: queryData,

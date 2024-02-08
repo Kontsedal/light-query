@@ -31,8 +31,9 @@ export type Cache = {
   fetch: <T>(
     key: string,
     getter: () => Promise<T> | T,
-    forced: boolean
-  ) => Promise<void>;
+    forced: boolean,
+    setError: boolean
+  ) => Promise<{ error?: unknown; data?: T }>;
   gInt?: NodeJS.Timeout | undefined;
   toggleGc: (enabled: boolean) => void;
 };
@@ -89,18 +90,23 @@ export const createCache = (options?: CreateCacheOptions) => {
       return result;
     },
 
-    async fetch<T>(key: string, getter: () => Promise<T> | T, forced = false) {
+    async fetch<T>(
+      key: string,
+      getter: () => Promise<T> | T,
+      forced = false,
+      setError = true
+    ) {
       this.init(key);
       const queryState = this.get<T>(key) as QueryState<T>;
       if (queryState.isLoading && !forced) {
-        return;
+        return {};
       }
       if (
         queryState.lastFetchedAt &&
         queryState.staleTime + queryState.lastFetchedAt > Date.now() &&
         !forced
       ) {
-        return;
+        return {};
       }
       this.set(key, {
         isLoading: true,
@@ -114,11 +120,15 @@ export const createCache = (options?: CreateCacheOptions) => {
           error: undefined,
           lastFetchedAt: Date.now(),
         });
+        return { data: result };
       } catch (e) {
-        this.set(key, {
-          isLoading: false,
-          error: e as Error,
-        });
+        if (setError) {
+          this.set(key, {
+            isLoading: false,
+            error: e as Error,
+          });
+        }
+        return { error: e };
       }
     },
     gInt: undefined,
