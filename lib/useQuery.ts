@@ -5,33 +5,36 @@ import { CacheContext } from "./context";
 
 export type UseQueryGetter<T> = () => Promise<T> | T;
 export type UseQueryRefetchInterval<T> = number | ((latestData?: T) => number);
-export type UseQueryParams<T> = {
-  key: string;
-  getter: UseQueryGetter<T>;
+export type UseOptions<T> = {
   refetchInterval?: UseQueryRefetchInterval<T>;
   cacheTime?: number;
   staleTime?: number;
   refetchOnWindowFocus?: boolean;
   refetchOnReconnect?: boolean;
+  cache?: Cache;
 };
 
-export const useQuery = <T>(params: UseQueryParams<T>, forcedCache?: Cache) => {
+export const useQuery = <T>(
+  key: string,
+  fetchFn: UseQueryGetter<T>,
+  params?: UseOptions<T>
+) => {
   const contextCache = useContext(CacheContext);
-  const cache = forcedCache || contextCache;
+  const cache = params?.cache || contextCache;
   const [queryState, setQueryState] = useState(
-    cache.get(params.key) ?? cache.init(params.key)
+    cache.get(key) ?? cache.init(key)
   );
   const refetchTimer = useRef<NodeJS.Timeout>();
   const syncState = () => {
-    setQueryState(cache.get(params.key) as QueryState<T>);
+    setQueryState(cache.get(key) as QueryState<T>);
   };
   const fetchQuery = async (force: boolean) => {
-    await cache.fetch(params.key, params.getter, force);
-    if (params.refetchInterval) {
+    await cache.fetch(key, fetchFn, force);
+    if (params?.refetchInterval) {
       const interval =
         typeof params.refetchInterval === "number"
           ? params.refetchInterval
-          : params.refetchInterval(cache.get<T>(params.key)?.data);
+          : params.refetchInterval(cache.get<T>(key)?.data);
       if (interval > 0) {
         refetchTimer.current = setTimeout(() => fetchQuery(true), interval);
       }
@@ -40,18 +43,18 @@ export const useQuery = <T>(params: UseQueryParams<T>, forcedCache?: Cache) => {
 
   useEffect(() => {
     cache.set(
-      params.key,
-      pickIfDefined(params, ["cacheTime", "staleTime"]),
+      key,
+      pickIfDefined(params || {}, ["cacheTime", "staleTime"]),
       false
     );
     const cleanups: (() => unknown)[] = [];
-    const unsubscribe = cache.sub(params.key, syncState);
+    const unsubscribe = cache.sub(key, syncState);
     let forcedRefetch = fetchQuery.bind(null, true);
     fetchQuery(false).catch();
-    if (params.refetchOnWindowFocus || queryState.refetchOnWindowFocus) {
+    if (params?.refetchOnWindowFocus ?? queryState.refetchOnWindowFocus) {
       cleanups.push(addWindowListener("focus", forcedRefetch));
     }
-    if (params.refetchOnReconnect || queryState.refetchOnReconnect) {
+    if (params?.refetchOnReconnect ?? queryState.refetchOnReconnect) {
       cleanups.push(addWindowListener("online", forcedRefetch));
     }
     return () => {
@@ -59,7 +62,7 @@ export const useQuery = <T>(params: UseQueryParams<T>, forcedCache?: Cache) => {
       unsubscribe();
       cleanups.forEach((cleanup) => cleanup());
     };
-  }, [params.key]);
+  }, [key]);
 
   return {
     ...queryState,

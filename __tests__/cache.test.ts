@@ -34,6 +34,8 @@ describe("cache", () => {
         error: undefined,
         cacheTime: 300000,
         staleTime: 30000,
+        refetchOnReconnect: false,
+        refetchOnWindowFocus: false,
       });
     });
   });
@@ -48,6 +50,8 @@ describe("cache", () => {
         error: undefined,
         cacheTime: 5 * 60 * 1000,
         staleTime: 0,
+        refetchOnReconnect: false,
+        refetchOnWindowFocus: false,
       });
     });
 
@@ -71,6 +75,8 @@ describe("cache", () => {
         error: undefined,
         cacheTime: 1000,
         staleTime: 1000,
+        refetchOnReconnect: false,
+        refetchOnWindowFocus: false,
       });
     });
     it("should set default params on set if it didn't exist", () => {
