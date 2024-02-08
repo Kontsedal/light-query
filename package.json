@@ -8,6 +8,9 @@
     "test": "jest",
     "release": "np"
   },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "types": "build/index.d.ts",
   "module": "build/index.js",
