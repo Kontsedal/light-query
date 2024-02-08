@@ -1,6 +1,6 @@
 {
   "name": "@kontsedal/light-query",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A lightweight and dumb react-query alternative",
   "main": "build/index.js",
   "scripts": {
