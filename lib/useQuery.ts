@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { QueryState, Cache } from "./cache";
 import {
   addWindowListener,
@@ -85,10 +85,15 @@ export const useQuery = <T>(
     };
   }, [key]);
 
-  return {
-    ...queryState,
-    refetch: () => fetchQuery(true),
-  };
+  return useMemo(
+    () => ({
+      data: queryState.data,
+      error: queryState.error,
+      isLoading: queryState.isLoading,
+      refetch: () => fetchQuery(true),
+    }),
+    [queryState.data, queryState.error, queryState.isLoading]
+  );
 };
 
 export type UseQueryGetter<T> = () => Promise<T> | T;
