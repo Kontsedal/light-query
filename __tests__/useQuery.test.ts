@@ -412,4 +412,20 @@ describe("useQuery", () => {
       expect(getter).toHaveBeenCalledTimes(1);
     });
   });
+
+  it("should do nothing if the query is disabled", async () => {
+    const cache = createCache();
+    const { result } = renderHook(() => {
+      return useQuery(queryKey, async () => queryData, {
+        enabled: false,
+        cache,
+      });
+    });
+    await act(async () => {});
+    expect(result.current).toMatchObject({
+      data: undefined,
+      isLoading: false,
+      error: undefined,
+    });
+  });
 });

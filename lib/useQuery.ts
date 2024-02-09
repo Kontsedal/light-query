@@ -62,6 +62,9 @@ export const useQuery = <T>(
   };
 
   useEffect(() => {
+    if (typeof params?.enabled === "boolean" && !params?.enabled) {
+      return;
+    }
     mounted.current = true;
     cache.set(
       key,
@@ -83,7 +86,7 @@ export const useQuery = <T>(
       cleanups.filter(isFunction).forEach((cleanup) => cleanup());
       mounted.current = false;
     };
-  }, [key]);
+  }, [key, params?.enabled]);
 
   return useMemo(
     () => ({
@@ -113,4 +116,5 @@ export type UseQueryOptions<T> = {
   refetchOnReconnect?: boolean;
   cache?: Cache;
   retry?: RetryFn<T>;
+  enabled?: boolean;
 };
