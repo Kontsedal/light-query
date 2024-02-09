@@ -11,7 +11,7 @@ import { CacheContext } from "./context";
 export const useQuery = <T>(
   key: string,
   fetchFn: UseQueryGetter<T>,
-  params?: UseOptions<T>
+  params?: UseQueryOptions<T>
 ) => {
   const contextCache = useContext(CacheContext);
   const cache = params?.cache || contextCache;
@@ -105,7 +105,7 @@ export type RetryFn<T> = (
   error: unknown,
   latestData?: QueryState<T>
 ) => number | Promise<number>;
-export type UseOptions<T> = {
+export type UseQueryOptions<T> = {
   refetchInterval?: UseQueryRefetchInterval<T>;
   cacheTime?: number;
   staleTime?: number;
