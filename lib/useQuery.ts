@@ -15,8 +15,8 @@ export const useQuery = <T>(
 ) => {
   const contextCache = useContext(CacheContext);
   const cache = params?.cache || contextCache;
-  const [queryState, setQueryState] = useState(
-    cache.get(key) ?? cache.init(key)
+  const [queryState, setQueryState] = useState<QueryState<T>>(
+    cache.get<T>(key) ?? cache.init<T>(key)
   );
   const refetchTimer = useRef<NodeJS.Timeout>();
   const mounted = useRef(true);
