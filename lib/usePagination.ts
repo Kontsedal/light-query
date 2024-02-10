@@ -54,14 +54,14 @@ export const usePagination = <T, D>(
   }, [query, pages, currentPageNumber]);
 };
 
-export type UsePaginationOptions<T, P> = UseQueryOptions<T> & {
+export type UsePaginationOptions<T, D> = UseQueryOptions<T> & {
   defaultPage?: number;
   getFetchPageParams: (
     requestedPageNumber: number,
     currentPageNumber: number,
     currentPage: T | undefined,
     allPages: T[]
-  ) => P | undefined;
+  ) => D | undefined;
 };
 
 export type UsePaginationFetchFn<T, D> = (
