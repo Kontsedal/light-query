@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 export const pickIfDefined = <T extends object>(obj: T, keys: (keyof T)[]) => {
   return keys.reduce((result, key) => {
     if (obj[key] !== undefined) {
@@ -17,3 +19,11 @@ export const isUndefined = (value: unknown): value is undefined =>
 
 export const isFunction = (value: unknown): value is () => unknown =>
   typeof value === "function";
+
+export const useValueRef = <T>(value: T) => {
+  const ref = useRef(value);
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+  return ref;
+};

@@ -5,6 +5,7 @@ import {
   isFunction,
   isUndefined,
   pickIfDefined,
+  useValueRef,
 } from "./utils";
 import { CacheContext } from "./context";
 
@@ -24,10 +25,8 @@ export const useQuery = <T>(
     setQueryState(cache.get(key) as QueryState<T>);
   };
 
-  const fetchFnRef = useRef(fetchFn);
-  useEffect(() => {
-    fetchFnRef.current = fetchFn;
-  }, [fetchFn]);
+  const fetchFnRef = useValueRef(fetchFn);
+  const refetchIntervalRef = useValueRef(params?.refetchInterval);
   const retryFetch = async (error: unknown, retryFn: RetryFn<T>) => {
     let latestError = error;
     let attempt = 0;
@@ -61,9 +60,11 @@ export const useQuery = <T>(
     if (!isUndefined(result?.error) && params?.retry) {
       await retryFetch(result.error, params.retry);
     }
-    if (params?.refetchInterval) {
+    if (refetchIntervalRef.current) {
       clearTimeout(refetchTimer.current);
-      const interval = await params.refetchInterval(cache.get<T>(key)?.data);
+      const interval = await refetchIntervalRef.current(
+        cache.get<T>(key)?.data
+      );
       if (interval > 0) {
         refetchTimer.current = setTimeout(() => fetchQuery(true), interval);
       }
