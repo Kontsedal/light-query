@@ -13,8 +13,9 @@ export const useMutation = <T, D>(mutationFn: (vars?: T) => Promise<D> | D) => {
       return await mutateRef.current(vars);
     } catch (e) {
       setError(e);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
   return useMemo(() => ({ isLoading, error, mutate }), [isLoading, error]);
 };
