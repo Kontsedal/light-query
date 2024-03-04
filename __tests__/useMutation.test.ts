@@ -41,4 +41,21 @@ describe("useMutation", () => {
     });
     expect(mutationFn).toHaveBeenCalledWith("vars");
   });
+
+  it("should use latest mutation function", async () => {
+    const mutationFn = jest.fn();
+    const { result, rerender } = renderHook(
+      (mutationFn) => useMutation(mutationFn),
+      {
+        initialProps: mutationFn,
+      }
+    );
+    const newMutationFn = jest.fn();
+    rerender(newMutationFn);
+    await act(async () => {
+      await result.current.mutate();
+    });
+    expect(newMutationFn).toHaveBeenCalled();
+    expect(mutationFn).not.toHaveBeenCalled();
+  });
 });

@@ -23,6 +23,11 @@ export const useQuery = <T>(
   const syncState = () => {
     setQueryState(cache.get(key) as QueryState<T>);
   };
+
+  const fetchFnRef = useRef(fetchFn);
+  useEffect(() => {
+    fetchFnRef.current = fetchFn;
+  }, [fetchFn]);
   const retryFetch = async (error: unknown, retryFn: RetryFn<T>) => {
     let latestError = error;
     let attempt = 0;
@@ -35,7 +40,7 @@ export const useQuery = <T>(
       retryInterval = await retryFn(attempt, error, cache.get<T>(key));
       if (retryInterval > 0) {
         await new Promise((resolve) => setTimeout(resolve, retryInterval));
-        const result = await cache.fetch(key, fetchFn, true, false);
+        const result = await cache.fetch(key, fetchFnRef.current, true, false);
         latestError = result.error;
       } else {
         cache.set(
@@ -47,7 +52,12 @@ export const useQuery = <T>(
     } while (retryInterval > 0);
   };
   const fetchQuery = async (force: boolean) => {
-    let result = await cache.fetch<T>(key, fetchFn, force, !params?.retry);
+    let result = await cache.fetch<T>(
+      key,
+      fetchFnRef.current,
+      force,
+      !params?.retry
+    );
     if (!isUndefined(result?.error) && params?.retry) {
       await retryFetch(result.error, params.retry);
     }
