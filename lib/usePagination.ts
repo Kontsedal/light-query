@@ -54,7 +54,7 @@ export const usePagination = <T, D>(
       },
     };
     return result;
-  }, [query, currentPageNumber, pages.current[key]]);
+  }, [query, currentPageNumber, pages.current[key], key]);
 };
 
 export type UsePaginationOptions<T, D> = UseQueryOptions<T> & {
