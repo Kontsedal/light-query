@@ -38,7 +38,7 @@ export const usePagination = <T, D>(
         return !!params.getFetchPageParams(
           pageNumber,
           currentPageNumber,
-          pages.current?.[pageNumber],
+          pages.current?.[currentPageNumber],
           pages.current
         );
       },
