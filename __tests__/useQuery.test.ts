@@ -428,4 +428,28 @@ describe("useQuery", () => {
       error: undefined,
     });
   });
+
+  it("should return the different data on query key change with disable", async () => {
+    const cache = createCache();
+    const initialQueryKey = faker.string.nanoid();
+    const newQueryKey = faker.string.nanoid();
+    const initialQueryData = { username: "initial" };
+    const { result, rerender } = renderHook(
+      (props: { key: string; enabled: boolean }) => {
+        return useQuery(props.key, async () => initialQueryData, {
+          enabled: props.enabled,
+          cache,
+        });
+      },
+      { initialProps: { key: initialQueryKey, enabled: true } }
+    );
+    await act(async () => {});
+    rerender({ key: newQueryKey, enabled: false });
+    await act(async () => {});
+    expect(result.current).toMatchObject({
+      data: undefined,
+      isLoading: false,
+      error: undefined,
+    });
+  });
 });

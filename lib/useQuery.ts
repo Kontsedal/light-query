@@ -74,7 +74,7 @@ export const useQuery = <T>(
 
   useEffect(() => {
     if (typeof params?.enabled === "boolean" && !params?.enabled) {
-      return;
+      return syncState();
     }
     mounted.current = true;
     cache.set(
