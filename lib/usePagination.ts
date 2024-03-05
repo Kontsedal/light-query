@@ -10,36 +10,41 @@ export const usePagination = <T, D>(
     params?.defaultPage ?? 1
   );
   const currentPageKey = `${key}#[${currentPageNumber}]`;
-  const pages = useRef<T[]>([]);
+  const pages = useRef<Record<string, T[]>>({
+    [key]: [],
+  });
   const query = useQuery(
     currentPageKey,
     async () => {
       let paginationParams = params.getFetchPageParams?.(
         currentPageNumber,
         currentPageNumber,
-        pages.current?.[currentPageNumber],
-        pages.current
+        pages.current?.[key]?.[currentPageNumber],
+        pages.current?.[key] || []
       );
       return fetchFn(paginationParams);
     },
     params
   );
-  if (query.data && pages.current[currentPageNumber] !== query.data) {
-    pages.current = [...pages.current];
-    pages.current[currentPageNumber] = query.data;
+  if (!pages.current[key]) {
+    pages.current[key] = [];
+  }
+  if (query.data && pages.current[key]?.[currentPageNumber] !== query.data) {
+    pages.current[key] = [...(pages.current[key] as T[])];
+    (pages.current[key] as T[])[currentPageNumber] = query.data;
   }
 
   return useMemo(() => {
     const result = {
       ...query,
-      pages: pages.current.filter(Boolean),
+      pages: (pages.current[key] as T[])?.filter(Boolean) || [],
       pageNumber: currentPageNumber,
       hasPage(pageNumber: number) {
         return !!params.getFetchPageParams(
           pageNumber,
           currentPageNumber,
-          pages.current?.[currentPageNumber],
-          pages.current
+          pages.current[key]?.[currentPageNumber],
+          pages.current[key] as T[]
         );
       },
       fetchPage(pageNumber: number) {
@@ -49,7 +54,7 @@ export const usePagination = <T, D>(
       },
     };
     return result;
-  }, [query, currentPageNumber, pages.current]);
+  }, [query, currentPageNumber, pages.current[key]]);
 };
 
 export type UsePaginationOptions<T, D> = UseQueryOptions<T> & {
