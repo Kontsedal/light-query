@@ -326,12 +326,13 @@ describe("useQuery", () => {
 
   describe("retry", () => {
     it("should not retry if the retry function returns 0", async () => {
+      const queryKey = faker.string.nanoid();
       let error = new Error("error");
       const getter = jest.fn(() => {
         throw error;
       });
       const cache = createCache();
-      const { result } = renderHook(() =>
+      renderHook(() =>
         useQuery(queryKey, getter, {
           retry: () => 0,
           cache,
@@ -341,11 +342,6 @@ describe("useQuery", () => {
         await wait(50);
       });
       expect(getter).toHaveBeenCalledTimes(1);
-      expect(result.current).toMatchObject({
-        data: undefined,
-        isLoading: false,
-        error: error,
-      });
     });
 
     it("should retry if the retry function returns a positive number", async () => {

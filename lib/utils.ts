@@ -27,3 +27,6 @@ export const useValueRef = <T>(value: T) => {
   }, [value]);
   return ref;
 };
+
+export const wait = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));

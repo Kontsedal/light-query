@@ -31,9 +31,11 @@ export const createCache = (options?: CreateCacheOptions) => {
       // Notify any listeners of the change
       let listeners = this.l[key];
       if (notify && listeners?.length) {
-        try {
-          listeners.forEach((listener) => listener());
-        } catch (e) {}
+        listeners.forEach((listener) => {
+          try {
+            listener();
+          } catch (e) {}
+        });
       }
     },
     sub(key, listener) {
@@ -49,7 +51,7 @@ export const createCache = (options?: CreateCacheOptions) => {
       if (!this.d[key]) {
         this.d[key] = getDefaultQueryState(options ?? {});
       }
-      return this.d[key] as QueryState<T>;
+      return this.get<T>(key) as QueryState<T>;
     },
 
     get<T>(key: string): QueryState<T> {

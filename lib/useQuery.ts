@@ -6,6 +6,7 @@ import {
   isUndefined,
   pickIfDefined,
   useValueRef,
+  wait,
 } from "./utils";
 import { CacheContext } from "./context";
 
@@ -14,20 +15,23 @@ export const useQuery = <T>(
   fetchFn: UseQueryGetter<T>,
   params?: UseQueryOptions<T>
 ) => {
+  const [_, setTime] = useState(0);
   const contextCache = useContext(CacheContext);
   const cache = params?.cache || contextCache;
-  const [queryState, setQueryState] = useState<QueryState<T>>(
-    cache.get<T>(key) ?? cache.init<T>(key)
-  );
+  const queryState = cache.init<T>(key);
   const refetchTimer = useRef<NodeJS.Timeout>();
   const mounted = useRef(true);
-  const syncState = () => {
-    setQueryState(cache.get(key) as QueryState<T>);
+  const rerender = () => {
+    setTime(Date.now());
   };
 
   const fetchFnRef = useValueRef(fetchFn);
   const refetchIntervalRef = useValueRef(params?.refetchInterval);
-  const retryFetch = async (error: unknown, retryFn: RetryFn<T>) => {
+  const retryFnRef = useValueRef<RetryFn<T> | undefined>(params?.retry);
+  const retryFetch = async (error: unknown) => {
+    if (!retryFnRef.current) {
+      return;
+    }
     let latestError = error;
     let attempt = 0;
     let retryInterval = 0;
@@ -36,11 +40,18 @@ export const useQuery = <T>(
         return;
       }
       attempt++;
-      retryInterval = await retryFn(attempt, error, cache.get<T>(key));
+      retryInterval = await retryFnRef.current(
+        attempt,
+        error,
+        cache.get<T>(key)
+      );
       if (retryInterval > 0) {
-        await new Promise((resolve) => setTimeout(resolve, retryInterval));
+        await wait(retryInterval);
         const result = await cache.fetch(key, fetchFnRef.current, true, false);
-        latestError = result.error;
+        if (isUndefined(result.error)) {
+          return;
+        }
+        latestError = result.error ?? latestError;
       } else {
         cache.set(
           key,
@@ -58,7 +69,7 @@ export const useQuery = <T>(
       !params?.retry
     );
     if (!isUndefined(result?.error) && params?.retry) {
-      await retryFetch(result.error, params.retry);
+      await retryFetch(result.error);
     }
     if (refetchIntervalRef.current) {
       clearTimeout(refetchTimer.current);
@@ -73,8 +84,10 @@ export const useQuery = <T>(
   };
 
   useEffect(() => {
-    if (typeof params?.enabled === "boolean" && !params?.enabled) {
-      return syncState();
+    const enabled =
+      typeof params?.enabled === "boolean" ? params.enabled : true;
+    if (!enabled) {
+      return rerender();
     }
     mounted.current = true;
     cache.set(
@@ -89,7 +102,7 @@ export const useQuery = <T>(
       (params?.refetchOnReconnect ?? queryState.refetchOnReconnect) &&
         addWindowListener("online", forcedRefetch),
     ];
-    const unsubscribe = cache.sub(key, syncState);
+    const unsubscribe = cache.sub(key, rerender);
     fetchQuery(false).catch();
     return () => {
       clearTimeout(refetchTimer.current);

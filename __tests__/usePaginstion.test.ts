@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { faker } from "@faker-js/faker";
 import { act, renderHook } from "@testing-library/react";
-import { usePagination, UsePaginationFetchFn } from "../lib";
+import { createCache, usePagination, UsePaginationFetchFn } from "../lib";
+import { wait } from "./utils";
 
 describe("usePagination", () => {
   let queryKey: string = "";
+  let cache = createCache();
   beforeEach(() => {
     queryKey = faker.string.nanoid();
+    cache = createCache();
   });
 
   it("should return correct initial state", async () => {
@@ -15,9 +18,12 @@ describe("usePagination", () => {
     const { result } = renderHook(() =>
       usePagination(queryKey, fetchFn, {
         getFetchPageParams: () => undefined,
+        cache,
       })
     );
-    await act(async () => {});
+    await act(async () => {
+      await wait(50);
+    });
     expect(result.current).toMatchObject({
       data: page,
       pages: [page],
@@ -35,6 +41,7 @@ describe("usePagination", () => {
     renderHook(() =>
       usePagination(queryKey, fetchFn, {
         getFetchPageParams,
+        cache,
       })
     );
     await act(async () => {});
@@ -58,12 +65,19 @@ describe("usePagination", () => {
     const { result } = renderHook(() =>
       usePagination(queryKey, fetchFn, {
         getFetchPageParams: (requestedPage) => requestedPage,
+        cache,
       })
     );
-    await act(async () => {});
+    await act(async () => {
+      await wait(50);
+    });
     await act(async () => {
       result.current.fetchPage(2);
     });
+    await act(async () => {
+      await wait(50);
+    });
+    await act(async () => {});
     expect(result.current).toMatchObject({
       data: page2,
       pages: [page1, page2],
@@ -92,11 +106,20 @@ describe("usePagination", () => {
         getFetchPageParams: (requestedPage) => {
           return requestedPage;
         },
+        cache,
       })
     );
-    await act(async () => {});
+    await act(async () => {
+      await wait(50);
+    });
     await act(async () => {
       result.current.fetchPage(20);
+    });
+    await act(async () => {
+      await wait(50);
+    });
+    await act(async () => {
+      await wait(50);
     });
     expect(result.current).toMatchObject({
       data: page21,
@@ -119,10 +142,42 @@ describe("usePagination", () => {
           }
           return undefined;
         },
+        cache,
       })
     );
     await act(async () => {});
     expect(result.current.hasPage(1)).toBe(true);
     expect(result.current.hasPage(2)).toBe(false);
+  });
+
+  it("should return the different data on query key change with disable", async () => {
+    const fetchFn = jest.fn(() => ({ a: 1 }));
+    const { result, rerender } = renderHook(
+      (props: { key: string; enabled: boolean }) =>
+        usePagination(props.key, fetchFn, {
+          getFetchPageParams: () => 1,
+          enabled: props.enabled,
+          cache,
+        }),
+      {
+        initialProps: {
+          key: faker.string.nanoid() + "_disabled",
+          enabled: true,
+        },
+      }
+    );
+    await act(async () => {});
+    const newQueryKey = faker.string.nanoid();
+    rerender({ key: newQueryKey, enabled: false });
+    await act(async () => {});
+    expect(result.current).toMatchObject({
+      data: undefined,
+      pages: [],
+      error: undefined,
+      isLoading: false,
+      pageNumber: 1,
+      hasPage: expect.any(Function),
+      fetchPage: expect.any(Function),
+    });
   });
 });
