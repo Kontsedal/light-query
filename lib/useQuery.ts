@@ -21,10 +21,6 @@ export const useQuery = <T>(
   const queryState = cache.init<T>(key);
   const refetchTimer = useRef<NodeJS.Timeout>();
   const mounted = useRef(true);
-  const rerender = () => {
-    setTime(Date.now());
-  };
-
   const fetchFnRef = useValueRef(fetchFn);
   const refetchIntervalRef = useValueRef(params?.refetchInterval);
   const retryFnRef = useValueRef<RetryFn<T> | undefined>(params?.retry);
@@ -87,9 +83,10 @@ export const useQuery = <T>(
     const enabled =
       typeof params?.enabled === "boolean" ? params.enabled : true;
     if (!enabled) {
-      return rerender();
+      return;
     }
     mounted.current = true;
+    const unsubscribe = cache.sub(key, () => setTime(Date.now()));
     cache.set(
       key,
       pickIfDefined(params || {}, ["cacheTime", "staleTime"]),
@@ -102,7 +99,6 @@ export const useQuery = <T>(
       (params?.refetchOnReconnect ?? queryState.refetchOnReconnect) &&
         addWindowListener("online", forcedRefetch),
     ];
-    const unsubscribe = cache.sub(key, rerender);
     fetchQuery(false).catch();
     return () => {
       clearTimeout(refetchTimer.current);
@@ -125,6 +121,7 @@ export const useQuery = <T>(
       queryState.error,
       queryState.isLoading,
       queryState.lastFetchedAt,
+      key,
     ]
   );
 };

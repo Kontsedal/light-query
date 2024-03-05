@@ -36,6 +36,7 @@ describe("cache", () => {
         staleTime: 30000,
         refetchOnReconnect: false,
         refetchOnWindowFocus: false,
+        lastAccessedAt: expect.any(Number),
       });
     });
   });

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { faker } from "@faker-js/faker";
 import { act, renderHook } from "@testing-library/react";
 import { createCache, usePagination, UsePaginationFetchFn } from "../lib";
-import { wait } from "./utils";
+import { wait, waitUntil } from "./utils";
 
 describe("usePagination", () => {
   let queryKey: string = "";
@@ -62,21 +62,32 @@ describe("usePagination", () => {
       }
       return [];
     };
-    const { result } = renderHook(() =>
+    const { result, rerender } = renderHook(() =>
       usePagination(queryKey, fetchFn, {
-        getFetchPageParams: (requestedPage) => requestedPage,
+        getFetchPageParams: (requestedPage) => {
+          return requestedPage;
+        },
         cache,
       })
     );
-    await act(async () => {
-      await wait(50);
-    });
-    await act(async () => {
-      result.current.fetchPage(2);
-    });
-    await act(async () => {
-      await wait(50);
-    });
+    await waitUntil(
+      async () => {
+        rerender();
+        return !result.current.isLoading && result.current.data === page1;
+      },
+      100,
+      30
+    );
+    result.current.fetchPage(2);
+
+    await waitUntil(
+      async () => {
+        rerender();
+        return !result.current.isLoading && result.current.data === page2;
+      },
+      100,
+      30
+    );
     await act(async () => {});
     expect(result.current).toMatchObject({
       data: page2,
@@ -101,7 +112,7 @@ describe("usePagination", () => {
       }
       return [];
     };
-    const { result } = renderHook(() =>
+    const { result, rerender } = renderHook(() =>
       usePagination(queryKey, fetchFn, {
         getFetchPageParams: (requestedPage) => {
           return requestedPage;
@@ -109,18 +120,23 @@ describe("usePagination", () => {
         cache,
       })
     );
-    await act(async () => {
-      await wait(50);
-    });
-    await act(async () => {
-      result.current.fetchPage(20);
-    });
-    await act(async () => {
-      await wait(50);
-    });
-    await act(async () => {
-      await wait(50);
-    });
+    await waitUntil(
+      async () => {
+        rerender();
+        return !result.current.isLoading && result.current.data === page1;
+      },
+      50,
+      30
+    );
+    result.current.fetchPage(20);
+    await waitUntil(
+      async () => {
+        rerender();
+        return !result.current.isLoading && result.current.data === page21;
+      },
+      50,
+      30
+    );
     expect(result.current).toMatchObject({
       data: page21,
       pages: [page1, page21],

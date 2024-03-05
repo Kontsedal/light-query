@@ -13,16 +13,18 @@ export const usePagination = <T, D>(
   const pages = useRef<Record<string, T[]>>({
     [key]: [],
   });
+  const fetchFnRef = useRef(fetchFn);
+  const getFetchPageParamsRef = useRef(params.getFetchPageParams);
   const query = useQuery(
     currentPageKey,
     async () => {
-      let paginationParams = params.getFetchPageParams?.(
+      let paginationParams = getFetchPageParamsRef.current?.(
         currentPageNumber,
         currentPageNumber,
         pages.current?.[key]?.[currentPageNumber],
         pages.current?.[key] || []
       );
-      return fetchFn(paginationParams);
+      return fetchFnRef.current(paginationParams);
     },
     params
   );
@@ -40,7 +42,7 @@ export const usePagination = <T, D>(
       pages: (pages.current[key] as T[])?.filter(Boolean) || [],
       pageNumber: currentPageNumber,
       hasPage(pageNumber: number) {
-        return !!params.getFetchPageParams(
+        return !!getFetchPageParamsRef.current(
           pageNumber,
           currentPageNumber,
           pages.current[key]?.[currentPageNumber],
@@ -53,8 +55,17 @@ export const usePagination = <T, D>(
         }
       },
     };
+    console.log("r", JSON.stringify(result));
     return result;
-  }, [query, currentPageNumber, pages.current[key], key]);
+  }, [
+    query.data,
+    query.error,
+    query.isLoading,
+    query.lastFetchedAt,
+    currentPageNumber,
+    pages.current[key],
+    key,
+  ]);
 };
 
 export type UsePaginationOptions<T, D> = UseQueryOptions<T> & {
