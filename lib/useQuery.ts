@@ -113,6 +113,8 @@ export const useQuery = <T>(
       data: queryState.data,
       error: queryState.error,
       isLoading: queryState.isLoading,
+      isIdle: !queryState.isLoading && !queryState.lastFetchedAt,
+      isUpdating: queryState.isLoading && queryState.lastFetchedAt,
       lastFetchedAt: queryState.lastFetchedAt,
       refetch: () => fetchQuery(true),
       reset: () =>

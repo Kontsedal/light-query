@@ -78,7 +78,9 @@ describe("usePagination", () => {
       100,
       30
     );
-    result.current.fetchPage(2);
+    await act(async () => {
+      result.current.fetchPage(2);
+    });
 
     await waitUntil(
       async () => {
@@ -128,7 +130,9 @@ describe("usePagination", () => {
       50,
       30
     );
-    result.current.fetchPage(20);
+    await act(async () => {
+      result.current.fetchPage(20);
+    });
     await waitUntil(
       async () => {
         rerender();
