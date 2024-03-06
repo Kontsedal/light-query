@@ -55,7 +55,6 @@ export const usePagination = <T, D>(
         }
       },
     };
-    console.log("r", JSON.stringify(result));
     return result;
   }, [
     query.data,
