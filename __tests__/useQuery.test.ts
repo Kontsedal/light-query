@@ -451,13 +451,14 @@ describe("useQuery", () => {
 
   it("should allow to reset the query", async () => {
     const cache = createCache();
-    const { result } = renderHook(() => {
+    const { result, rerender } = renderHook(() => {
       return useQuery(queryKey, async () => queryData, {
         cache,
       });
     });
+    await act(async () => {});
     await waitUntil(async () => {
-      await act(async () => {});
+      rerender();
       return !result.current.isLoading && result.current.data === queryData;
     });
     await act(async () => {
