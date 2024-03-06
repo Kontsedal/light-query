@@ -448,4 +448,24 @@ describe("useQuery", () => {
       error: undefined,
     });
   });
+
+  it("should allow to reset the query", async () => {
+    const cache = createCache();
+    const { result } = renderHook(() => {
+      return useQuery(queryKey, async () => queryData, {
+        cache,
+      });
+    });
+    await act(async () => {});
+    await act(async () => {
+      result.current.reset();
+    });
+    await wait(50);
+    await act(async () => {});
+    expect(result.current).toMatchObject({
+      data: undefined,
+      isLoading: false,
+      error: undefined,
+    });
+  });
 });

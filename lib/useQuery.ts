@@ -115,6 +115,8 @@ export const useQuery = <T>(
       isLoading: queryState.isLoading,
       lastFetchedAt: queryState.lastFetchedAt,
       refetch: () => fetchQuery(true),
+      reset: () =>
+        cache.set(key, { data: undefined, error: undefined, isLoading: false }),
     }),
     [
       queryState.data,
