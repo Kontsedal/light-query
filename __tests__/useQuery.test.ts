@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { faker } from "@faker-js/faker";
 import { createCache, useQuery } from "../lib";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { wait } from "./utils";
+import { wait, waitUntil } from "./utils";
 
 describe("useQuery", () => {
   let queryKey: string = "";
@@ -456,11 +456,13 @@ describe("useQuery", () => {
         cache,
       });
     });
-    await act(async () => {});
+    await waitUntil(async () => {
+      await act(async () => {});
+      return !result.current.isLoading && result.current.data === queryData;
+    });
     await act(async () => {
       result.current.reset();
     });
-    await wait(50);
     await act(async () => {});
     expect(result.current).toMatchObject({
       data: undefined,
