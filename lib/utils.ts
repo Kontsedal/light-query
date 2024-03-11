@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
 export const pickIfDefined = <T extends object>(obj: T, keys: (keyof T)[]) => {
   return keys.reduce((result, key) => {
@@ -22,9 +22,7 @@ export const isFunction = (value: unknown): value is () => unknown =>
 
 export const useValueRef = <T>(value: T) => {
   const ref = useRef(value);
-  useEffect(() => {
-    ref.current = value;
-  }, [value]);
+  ref.current = value;
   return ref;
 };
 

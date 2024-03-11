@@ -464,6 +464,9 @@ describe("useQuery", () => {
     await act(async () => {
       result.current.reset();
     });
+    await act(async () => {
+      rerender();
+    });
     await act(async () => {});
     expect(result.current).toMatchObject({
       data: undefined,
