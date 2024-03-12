@@ -111,6 +111,7 @@ export const createCache = (options?: CreateCacheOptions) => {
           this.set(key, {
             isLoading: false,
             error: e as Error,
+            lastFetchedAt: Date.now(),
           });
         }
         return { error: e };
