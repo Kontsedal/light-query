@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { useValueRef } from "./utils";
-export const useMutation = <T, D>(mutationFn: (vars: T) => Promise<D> | D) => {
+export const useMutation = <T = any, D = any>(
+  mutationFn: (vars: T) => Promise<D> | D
+) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<unknown | undefined>();
   const mutateRef = useValueRef(mutationFn);
-  const mutate = async (vars: T) => {
+  const mutate = async (vars: T = "" as any) => {
     setIsLoading(true);
     setError(undefined);
     try {
