@@ -6,13 +6,16 @@ export const useMutation = <T = any, D = any>(
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<unknown | undefined>();
   const mutateRef = useValueRef(mutationFn);
-  const mutate = async (vars: T = "" as any) => {
+  const mutate = async (vars: T = "" as any, throwError = false) => {
     setIsLoading(true);
     setError(undefined);
     try {
       return await mutateRef.current(vars);
     } catch (e) {
       setError(e);
+      if (throwError) {
+        throw e;
+      }
     } finally {
       setIsLoading(false);
     }
