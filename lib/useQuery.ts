@@ -51,7 +51,7 @@ export const useQuery = <T>(
       } else {
         cache.set(
           key,
-          { error: latestError, isLoading: false, data: undefined },
+          { error: latestError, isLoading: false },
           true
         );
       }
@@ -67,12 +67,15 @@ export const useQuery = <T>(
     if (!isUndefined(result?.error) && params?.retry) {
       await retryFetch(result.error);
     }
+    if (!mounted.current) {
+      return result;
+    }
     if (refetchIntervalRef.current) {
       clearTimeout(refetchTimer.current);
       const interval = await refetchIntervalRef.current(
         cache.get<T>(key)?.data
       );
-      if (interval > 0) {
+      if (interval > 0 && mounted.current) {
         refetchTimer.current = setTimeout(() => fetchQuery(true), interval);
       }
     }

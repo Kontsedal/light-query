@@ -1,5 +1,6 @@
 import { useQuery, UseQueryOptions } from "./useQuery";
 import { useMemo, useRef, useState } from "react";
+import { useValueRef } from "./utils";
 
 export const usePagination = <T, D>(
   key: string,
@@ -10,11 +11,9 @@ export const usePagination = <T, D>(
     params?.defaultPage ?? 1
   );
   const currentPageKey = `${key}#[${currentPageNumber}]`;
-  const pages = useRef<Record<string, T[]>>({
-    [key]: [],
-  });
-  const fetchFnRef = useRef(fetchFn);
-  const getFetchPageParamsRef = useRef(params.getFetchPageParams);
+  const pages = useRef<Record<string, T[]>>({});
+  const fetchFnRef = useValueRef(fetchFn);
+  const getFetchPageParamsRef = useValueRef(params.getFetchPageParams);
   const query = useQuery(
     currentPageKey,
     async () => {
