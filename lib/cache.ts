@@ -22,14 +22,14 @@ export const createCache = (options?: CreateCacheOptions) => {
     l: {}, // Listener storage for the cache
     set<T>(key: string, values: Partial<QueryState<T>>, notify = true) {
       // Get the current state for the key, or initialize a new one
-      let state = this.d[key] ?? this.init(key);
+      const state = this.d[key] ?? this.init(key);
       // Update the state with the new values
       this.d[key] = {
         ...state,
         ...values,
       };
       // Notify any listeners of the change
-      let listeners = this.l[key];
+      const listeners = this.l[key];
       if (notify && listeners?.length) {
         listeners.forEach((listener) => {
           try {
@@ -41,7 +41,7 @@ export const createCache = (options?: CreateCacheOptions) => {
       }
     },
     sub(key, listener) {
-      let listeners = this.l[key] ?? [];
+      const listeners = this.l[key] ?? [];
       this.l[key] = listeners;
       listeners.push(listener);
       let removed = false;
@@ -70,7 +70,7 @@ export const createCache = (options?: CreateCacheOptions) => {
           {
             lastAccessedAt: Date.now(),
           },
-          false
+          false,
         );
       }
       return result;
@@ -80,7 +80,7 @@ export const createCache = (options?: CreateCacheOptions) => {
       key: string,
       getter: () => Promise<T> | T,
       forced = false,
-      setError = true
+      setError = true,
     ) {
       // Initialize the key if necessary
       this.init(key);
@@ -142,8 +142,8 @@ export const createCache = (options?: CreateCacheOptions) => {
 
           // For each key in the cache
           queryKeys.forEach((key) => {
-            let data = this.d[key] as QueryState<any>;
-            let listeners = this.l[key];
+            const data = this.d[key] as QueryState<unknown>;
+            const listeners = this.l[key];
             // If there are listeners, don't remove the key
             if (Array.isArray(listeners) && listeners.length > 0) {
               return;
@@ -158,7 +158,8 @@ export const createCache = (options?: CreateCacheOptions) => {
               delete this.l[key];
             }
           });
-        }, options?.garbageCollectorInterval ?? defaultGarbageCollectorInterval);
+        }, options?.garbageCollectorInterval ??
+          defaultGarbageCollectorInterval);
       }
       if (!enabled && this.gInt) {
         // If disabling and the garbage collector is running, stop it
@@ -207,7 +208,7 @@ export type QueryState<T> = {
 
 export type Cache = {
   d: {
-    [key: string]: QueryState<any>;
+    [key: string]: QueryState<unknown>;
   };
   l: {
     [key: string]: (() => void)[];
@@ -222,7 +223,7 @@ export type Cache = {
   set: <T>(
     key: string,
     values: Partial<QueryState<T>>,
-    notify?: boolean
+    notify?: boolean,
   ) => void;
   /**
    * Method to subscribe a listener to a key
@@ -258,7 +259,7 @@ export type Cache = {
     key: string,
     getter: () => Promise<T> | T,
     forced: boolean,
-    setError: boolean
+    setError: boolean,
   ) => Promise<{ error?: unknown; data?: T }>;
   /**
    * Invalidates cache entries by exact key or prefix match.
@@ -270,7 +271,7 @@ export type Cache = {
    * The garbage collector interval
    * @type {NodeJS.Timeout | undefined}
    */
-  gInt?: NodeJS.Timeout | undefined;
+  gInt?: ReturnType<typeof setInterval> | undefined;
   /**
    * Method to toggle the garbage collector
    * @param {boolean} enabled - Whether to enable the garbage collector

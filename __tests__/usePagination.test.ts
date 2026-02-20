@@ -1,7 +1,7 @@
-import { vi } from "vitest";
 import { faker } from "@faker-js/faker";
 import { act, renderHook } from "@testing-library/react";
-import { createCache, usePagination, UsePaginationFetchFn } from "../lib";
+import { vi } from "vitest";
+import { createCache, type UsePaginationFetchFn, usePagination } from "../lib";
 import { wait, waitUntil } from "./utils";
 
 describe("usePagination", () => {
@@ -19,7 +19,7 @@ describe("usePagination", () => {
       usePagination(queryKey, fetchFn, {
         getFetchPageParams: () => undefined,
         cache,
-      })
+      }),
     );
     await act(async () => {
       await wait(50);
@@ -42,7 +42,7 @@ describe("usePagination", () => {
       usePagination(queryKey, fetchFn, {
         getFetchPageParams,
         cache,
-      })
+      }),
     );
     await act(async () => {});
     expect(fetchFn).toHaveBeenCalledWith({ page: 1 });
@@ -52,7 +52,7 @@ describe("usePagination", () => {
     const page1 = [{ a: 1 }, { a: 2 }, { a: 3 }];
     const page2 = [{ a: 4 }, { a: 5 }, { a: 6 }];
     const fetchFn: UsePaginationFetchFn<{ a: number }[], number> = (
-      requestedPage
+      requestedPage,
     ) => {
       if (requestedPage === 1) {
         return page1;
@@ -68,7 +68,7 @@ describe("usePagination", () => {
           return requestedPage;
         },
         cache,
-      })
+      }),
     );
     await waitUntil(
       async () => {
@@ -76,7 +76,7 @@ describe("usePagination", () => {
         return !result.current.isLoading && result.current.data === page1;
       },
       100,
-      30
+      30,
     );
     await act(async () => {
       result.current.fetchPage(2);
@@ -88,7 +88,7 @@ describe("usePagination", () => {
         return !result.current.isLoading && result.current.data === page2;
       },
       100,
-      30
+      30,
     );
     await act(async () => {});
     expect(result.current).toMatchObject({
@@ -104,7 +104,7 @@ describe("usePagination", () => {
     const page1 = [{ a: 1 }, { a: 2 }, { a: 3 }];
     const page21 = [{ a: 4 }, { a: 5 }, { a: 6 }];
     const fetchFn: UsePaginationFetchFn<{ a: number }[], number> = (
-      requestedPage
+      requestedPage,
     ) => {
       if (requestedPage === 1) {
         return page1;
@@ -120,7 +120,7 @@ describe("usePagination", () => {
           return requestedPage;
         },
         cache,
-      })
+      }),
     );
     await waitUntil(
       async () => {
@@ -128,7 +128,7 @@ describe("usePagination", () => {
         return !result.current.isLoading && result.current.data === page1;
       },
       50,
-      30
+      30,
     );
     await act(async () => {
       result.current.fetchPage(20);
@@ -139,7 +139,7 @@ describe("usePagination", () => {
         return !result.current.isLoading && result.current.data === page21;
       },
       50,
-      30
+      30,
     );
     expect(result.current).toMatchObject({
       data: page21,
@@ -163,7 +163,7 @@ describe("usePagination", () => {
           return undefined;
         },
         cache,
-      })
+      }),
     );
     await act(async () => {});
     expect(result.current.hasPage(1)).toBe(true);
@@ -181,10 +181,10 @@ describe("usePagination", () => {
         }),
       {
         initialProps: {
-          key: faker.string.nanoid() + "_disabled",
+          key: `${faker.string.nanoid()}_disabled`,
           enabled: true,
         },
-      }
+      },
     );
     await act(async () => {});
     const newQueryKey = faker.string.nanoid();

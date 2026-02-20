@@ -10,7 +10,7 @@ describe("cache", () => {
   beforeEach(() => {
     queryKey = faker.string.nanoid();
     queryData = {
-      username: faker.internet.userName(),
+      username: faker.internet.username(),
     };
   });
   describe("createCache", () => {
@@ -110,7 +110,7 @@ describe("cache", () => {
           return queryData;
         },
         false,
-        true
+        true,
       );
       expect(cache.d[queryKey]).toMatchObject({
         data: undefined,
@@ -121,14 +121,14 @@ describe("cache", () => {
 
     it("should set query state to error if fetching fails", async () => {
       const cache = createCache();
-      let error = new Error("error");
+      const error = new Error("error");
       await cache.fetch(
         queryKey,
         () => {
           throw error;
         },
         false,
-        true
+        true,
       );
       expect(cache.d[queryKey]).toMatchObject({
         data: undefined,
@@ -156,7 +156,7 @@ describe("cache", () => {
           return queryData;
         },
         false,
-        true
+        true,
       );
       const secondGetter = vi.fn();
       await cache.fetch(queryKey, async () => queryData, false, true);
@@ -190,7 +190,7 @@ describe("cache", () => {
           username: "new",
         }),
         false,
-        true
+        true,
       );
       expect(cache.d[queryKey]).toMatchObject({
         data: {
@@ -210,7 +210,7 @@ describe("cache", () => {
           return queryData;
         },
         false,
-        true
+        true,
       );
       const secondGetter = vi.fn();
       await cache.fetch(queryKey, secondGetter, true, true);
@@ -261,7 +261,7 @@ describe("cache", () => {
       });
       cache.sub(queryKey, callback);
       expect(() =>
-        cache.set(queryKey, { data: queryData }, true)
+        cache.set(queryKey, { data: queryData }, true),
       ).not.toThrowError();
     });
   });
@@ -278,13 +278,13 @@ describe("cache", () => {
     it("should invalidate keys by prefix", async () => {
       const cache = createCache();
       const prefix = "user-";
-      await cache.fetch(prefix + "1", () => queryData, false, true);
-      await cache.fetch(prefix + "2", () => queryData, false, true);
+      await cache.fetch(`${prefix}1`, () => queryData, false, true);
+      await cache.fetch(`${prefix}2`, () => queryData, false, true);
       await cache.fetch("other", () => queryData, false, true);
       cache.invalidate(prefix);
-      expect(cache.d[prefix + "1"]?.lastFetchedAt).toBeUndefined();
-      expect(cache.d[prefix + "2"]?.lastFetchedAt).toBeUndefined();
-      expect(cache.d["other"]?.lastFetchedAt).toBeDefined();
+      expect(cache.d[`${prefix}1`]?.lastFetchedAt).toBeUndefined();
+      expect(cache.d[`${prefix}2`]?.lastFetchedAt).toBeUndefined();
+      expect(cache.d.other?.lastFetchedAt).toBeDefined();
     });
 
     it("should notify listeners on invalidation", async () => {

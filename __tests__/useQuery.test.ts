@@ -1,7 +1,7 @@
-import { vi } from "vitest";
 import { faker } from "@faker-js/faker";
-import { createCache, useQuery } from "../lib";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { vi } from "vitest";
+import { createCache, useQuery } from "../lib";
 import { wait, waitUntil } from "./utils";
 
 describe("useQuery", () => {
@@ -10,7 +10,7 @@ describe("useQuery", () => {
   beforeEach(() => {
     queryKey = faker.string.nanoid();
     queryData = {
-      username: faker.internet.userName(),
+      username: faker.internet.username(),
     };
   });
 
@@ -44,8 +44,8 @@ describe("useQuery", () => {
         },
         {
           cache: cache,
-        }
-      )
+        },
+      ),
     );
     expect(result.current).toMatchObject({
       data: undefined,
@@ -73,8 +73,8 @@ describe("useQuery", () => {
         },
         {
           cache,
-        }
-      )
+        },
+      ),
     );
     expect(result.current).toMatchObject({
       data: undefined,
@@ -104,8 +104,8 @@ describe("useQuery", () => {
         },
         {
           cache,
-        }
-      )
+        },
+      ),
     );
     expect(result.current).toMatchObject({
       data: queryData,
@@ -127,8 +127,8 @@ describe("useQuery", () => {
           await wait(50);
           return { username: "new" };
         },
-        { cache }
-      )
+        { cache },
+      ),
     );
     await waitFor(() => {
       expect(result.current).toMatchObject({
@@ -147,7 +147,7 @@ describe("useQuery", () => {
       useQuery(queryKey, getter, {
         refetchInterval,
         cache,
-      })
+      }),
     );
     await act(async () => {
       await wait(25);
@@ -163,7 +163,7 @@ describe("useQuery", () => {
       useQuery(queryKey, getter, {
         refetchInterval: () => 0,
         cache,
-      })
+      }),
     );
     await act(async () => {
       await wait(25);
@@ -179,7 +179,7 @@ describe("useQuery", () => {
       useQuery(queryKey, getter, {
         refetchInterval,
         cache,
-      })
+      }),
     );
     await act(async () => {
       await wait(25);
@@ -203,8 +203,8 @@ describe("useQuery", () => {
           cache,
           cacheTime: 1000,
           staleTime: 500,
-        }
-      )
+        },
+      ),
     );
     expect(cache.get(queryKey)).toMatchObject({
       cacheTime: 1000,
@@ -220,7 +220,7 @@ describe("useQuery", () => {
     const { result } = renderHook(() =>
       useQuery(queryKey, getter, {
         cache,
-      })
+      }),
     );
     await act(async () => {
       await result.current.refetch();
@@ -236,7 +236,7 @@ describe("useQuery", () => {
         useQuery(queryKey, getter, {
           refetchOnWindowFocus: true,
           cache,
-        })
+        }),
       );
       await act(async () => {
         window.dispatchEvent(new Event("focus"));
@@ -251,7 +251,7 @@ describe("useQuery", () => {
         useQuery(queryKey, getter, {
           refetchOnWindowFocus: false,
           cache,
-        })
+        }),
       );
       await act(async () => {
         window.dispatchEvent(new Event("focus"));
@@ -267,7 +267,7 @@ describe("useQuery", () => {
       renderHook(() =>
         useQuery(queryKey, getter, {
           cache,
-        })
+        }),
       );
       await act(async () => {
         window.dispatchEvent(new Event("focus"));
@@ -284,7 +284,7 @@ describe("useQuery", () => {
         useQuery(queryKey, getter, {
           refetchOnReconnect: true,
           cache,
-        })
+        }),
       );
       await act(async () => {
         window.dispatchEvent(new Event("online"));
@@ -299,7 +299,7 @@ describe("useQuery", () => {
         useQuery(queryKey, getter, {
           refetchOnReconnect: false,
           cache,
-        })
+        }),
       );
       await act(async () => {
         window.dispatchEvent(new Event("online"));
@@ -315,7 +315,7 @@ describe("useQuery", () => {
       renderHook(() =>
         useQuery(queryKey, getter, {
           cache,
-        })
+        }),
       );
       await act(async () => {
         window.dispatchEvent(new Event("online"));
@@ -327,7 +327,7 @@ describe("useQuery", () => {
   describe("retry", () => {
     it("should not retry if the retry function returns 0", async () => {
       const queryKey = faker.string.nanoid();
-      let error = new Error("error");
+      const error = new Error("error");
       const getter = vi.fn(() => {
         throw error;
       });
@@ -336,7 +336,7 @@ describe("useQuery", () => {
         useQuery(queryKey, getter, {
           retry: () => 0,
           cache,
-        })
+        }),
       );
       await act(async () => {
         await wait(50);
@@ -345,7 +345,7 @@ describe("useQuery", () => {
     });
 
     it("should retry if the retry function returns a positive number", async () => {
-      let error = new Error("error");
+      const error = new Error("error");
       const getter = vi.fn(() => {
         throw error;
       });
@@ -354,7 +354,7 @@ describe("useQuery", () => {
         useQuery(queryKey, getter, {
           retry: (attempt) => (attempt === 1 ? 10 : 0),
           cache,
-        })
+        }),
       );
       await act(async () => {
         await wait(50);
@@ -368,7 +368,7 @@ describe("useQuery", () => {
     });
 
     it("should not set error during retry", async () => {
-      let error = new Error("error");
+      const error = new Error("error");
       const getter = vi.fn(() => {
         throw error;
       });
@@ -377,7 +377,7 @@ describe("useQuery", () => {
         useQuery(queryKey, getter, {
           retry: () => 100,
           cache,
-        })
+        }),
       );
       await act(async () => {
         await wait(50);
@@ -390,7 +390,7 @@ describe("useQuery", () => {
     });
 
     it("should not refetch on interval during retry", async () => {
-      let error = new Error("error");
+      const error = new Error("error");
       const getter = vi.fn(() => {
         throw error;
       });
@@ -400,7 +400,7 @@ describe("useQuery", () => {
           retry: () => 100,
           refetchInterval: () => 100,
           cache,
-        })
+        }),
       );
       await act(async () => {
         await wait(90);
@@ -437,7 +437,7 @@ describe("useQuery", () => {
           cache,
         });
       },
-      { initialProps: { key: initialQueryKey, enabled: true } }
+      { initialProps: { key: initialQueryKey, enabled: true } },
     );
     await act(async () => {});
     rerender({ key: newQueryKey, enabled: false });
@@ -486,8 +486,8 @@ describe("useQuery", () => {
           await wait(50);
           return queryData;
         },
-        { cache }
-      )
+        { cache },
+      ),
     );
     await waitFor(() => {
       expect(result.current.data).toEqual(queryData);
@@ -507,8 +507,8 @@ describe("useQuery", () => {
           await wait(50);
           return queryData;
         },
-        { cache }
-      )
+        { cache },
+      ),
     );
     expect(result.current.isSuccess).toBe(false);
     expect(result.current.isError).toBe(false);
@@ -529,8 +529,8 @@ describe("useQuery", () => {
         async () => {
           throw error;
         },
-        { cache }
-      )
+        { cache },
+      ),
     );
     await act(async () => {
       await wait(50);
@@ -544,7 +544,7 @@ describe("useQuery", () => {
     const cache = createCache();
     const myData = { username: "test-user" };
     const { result, rerender } = renderHook(() =>
-      useQuery(queryKey, () => myData, { cache })
+      useQuery(queryKey, () => myData, { cache }),
     );
     await act(async () => {});
     await waitUntil(async () => {
@@ -563,7 +563,7 @@ describe("useQuery", () => {
     const cache = createCache();
     const myData = { username: "test-user" };
     const { result, rerender } = renderHook(() =>
-      useQuery(queryKey, () => myData, { cache })
+      useQuery(queryKey, () => myData, { cache }),
     );
     await act(async () => {});
     await waitUntil(async () => {
@@ -572,7 +572,7 @@ describe("useQuery", () => {
     });
     act(() => {
       result.current.setData((prev) => ({
-        username: (prev?.username ?? "") + "_updated",
+        username: `${prev?.username ?? ""}_updated`,
       }));
     });
     rerender();
@@ -591,8 +591,8 @@ describe("useQuery", () => {
           await wait(100);
           return queryData;
         },
-        { cache, initialData }
-      )
+        { cache, initialData },
+      ),
     );
     expect(result.current.data).toEqual(initialData);
   });
@@ -601,7 +601,7 @@ describe("useQuery", () => {
     const cache = createCache();
     const onSuccess = vi.fn();
     renderHook(() =>
-      useQuery(queryKey, async () => queryData, { cache, onSuccess })
+      useQuery(queryKey, async () => queryData, { cache, onSuccess }),
     );
     await act(async () => {
       await wait(50);
@@ -619,8 +619,8 @@ describe("useQuery", () => {
         async () => {
           throw error;
         },
-        { cache, onError }
-      )
+        { cache, onError },
+      ),
     );
     await act(async () => {
       await wait(50);

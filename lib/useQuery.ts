@@ -1,5 +1,5 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { QueryState, Cache } from "./cache";
+import type { QueryState, Cache } from "./cache";
 import {
   addWindowListener,
   isFunction,
@@ -13,13 +13,13 @@ import { CacheContext } from "./context";
 export const useQuery = <T>(
   key: string,
   fetchFn: UseQueryGetter<T>,
-  params?: UseQueryOptions<T>
+  params?: UseQueryOptions<T>,
 ) => {
   const [_, setTime] = useState(0);
   const contextCache = useContext(CacheContext);
   const cache = params?.cache || contextCache;
   const queryState = cache.init<T>(key);
-  const refetchTimer = useRef<NodeJS.Timeout>();
+  const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mounted = useRef(true);
   const fetchFnRef = useValueRef(fetchFn);
   const refetchIntervalRef = useValueRef(params?.refetchInterval);
@@ -41,7 +41,7 @@ export const useQuery = <T>(
       retryInterval = await retryFnRef.current(
         attempt,
         error,
-        cache.get<T>(key)
+        cache.get<T>(key),
       );
       if (retryInterval > 0) {
         await wait(retryInterval);
@@ -51,20 +51,16 @@ export const useQuery = <T>(
         }
         latestError = result.error ?? latestError;
       } else {
-        cache.set(
-          key,
-          { error: latestError, isLoading: false },
-          true
-        );
+        cache.set(key, { error: latestError, isLoading: false }, true);
       }
     } while (retryInterval > 0);
   };
   const fetchQuery = async (force: boolean) => {
-    let result = await cache.fetch<T>(
+    const result = await cache.fetch<T>(
       key,
       fetchFnRef.current,
       force,
-      !params?.retry
+      !params?.retry,
     );
     if (!isUndefined(result?.error) && params?.retry) {
       await retryFetch(result.error);
@@ -83,9 +79,9 @@ export const useQuery = <T>(
       return result;
     }
     if (refetchIntervalRef.current) {
-      clearTimeout(refetchTimer.current);
+      refetchTimer.current && clearTimeout(refetchTimer.current);
       const interval = await refetchIntervalRef.current(
-        cache.get<T>(key)?.data
+        cache.get<T>(key)?.data,
       );
       if (interval > 0 && mounted.current) {
         refetchTimer.current = setTimeout(() => fetchQuery(true), interval);
@@ -94,6 +90,7 @@ export const useQuery = <T>(
     return result;
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fetchQuery and cache methods are intentionally excluded; fetchQuery is recreated each render but uses stable refs, and params is excluded to avoid re-running the effect on every render
   useEffect(() => {
     const enabled =
       typeof params?.enabled === "boolean" ? params.enabled : true;
@@ -105,12 +102,15 @@ export const useQuery = <T>(
     cache.set(
       key,
       pickIfDefined(params || {}, ["cacheTime", "staleTime"]),
-      false
+      false,
     );
-    if (params?.initialData !== undefined && !cache.get<T>(key)?.lastFetchedAt) {
+    if (
+      params?.initialData !== undefined &&
+      !cache.get<T>(key)?.lastFetchedAt
+    ) {
       cache.set(key, { data: params.initialData }, false);
     }
-    let forcedRefetch = fetchQuery.bind(null, true);
+    const forcedRefetch = fetchQuery.bind(null, true);
     const cleanups: ((() => unknown) | boolean | undefined)[] = [
       (params?.refetchOnWindowFocus ?? queryState.refetchOnWindowFocus) &&
         addWindowListener("focus", forcedRefetch),
@@ -119,13 +119,16 @@ export const useQuery = <T>(
     ];
     fetchQuery(false).catch(console.error);
     return () => {
-      clearTimeout(refetchTimer.current);
+      refetchTimer.current && clearTimeout(refetchTimer.current);
       unsubscribe();
-      cleanups.filter(isFunction).forEach((cleanup) => cleanup());
+      cleanups.filter(isFunction).forEach((cleanup) => {
+        cleanup();
+      });
       mounted.current = false;
     };
   }, [key, params?.enabled]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: cache and fetchQuery are intentionally excluded; cache is stable from context and fetchQuery uses stable refs
   return useMemo(
     () => ({
       data: queryState.data,
@@ -133,7 +136,8 @@ export const useQuery = <T>(
       isLoading: queryState.isLoading,
       isIdle: !queryState.isLoading && !queryState.lastFetchedAt,
       isUpdating: queryState.isLoading && !!queryState.lastFetchedAt,
-      isSuccess: !queryState.isLoading && !!queryState.data && !queryState.error,
+      isSuccess:
+        !queryState.isLoading && !!queryState.data && !queryState.error,
       isError: !queryState.isLoading && !!queryState.error,
       isFetched: !!queryState.lastFetchedAt,
       lastFetchedAt: queryState.lastFetchedAt,
@@ -160,18 +164,18 @@ export const useQuery = <T>(
       queryState.isLoading,
       queryState.lastFetchedAt,
       key,
-    ]
+    ],
   );
 };
 
 export type UseQueryGetter<T> = () => Promise<T> | T;
 export type UseQueryRefetchInterval<T> = (
-  latestData?: T
+  latestData?: T,
 ) => number | Promise<number>;
 export type RetryFn<T> = (
   attempt: number,
   error: unknown,
-  latestData?: QueryState<T>
+  latestData?: QueryState<T>,
 ) => number | Promise<number>;
 export type UseQueryOptions<T> = {
   refetchInterval?: UseQueryRefetchInterval<T>;

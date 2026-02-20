@@ -6,7 +6,7 @@ import { wait } from "./utils";
 describe("useMutation", () => {
   it("should report loading state", async () => {
     const { result } = renderHook(() => useMutation(async () => wait(50)));
-    await act(() => {
+    act(() => {
       result.current.mutate();
     });
     expect(result.current).toMatchObject({
@@ -20,12 +20,12 @@ describe("useMutation", () => {
       useMutation(async () => {
         await wait(50);
         throw error;
-      })
+      }),
     );
     await act(async () => {
       try {
         await result.current.mutate();
-      } catch (e) {}
+      } catch {}
     });
     expect(result.current).toMatchObject({
       isLoading: false,
@@ -35,9 +35,7 @@ describe("useMutation", () => {
 
   it("should pass variables to mutation function", async () => {
     const mutationFn = vi.fn();
-    const { result } = renderHook(() =>
-      useMutation<string>(mutationFn)
-    );
+    const { result } = renderHook(() => useMutation<string>(mutationFn));
     await act(async () => {
       await result.current.mutate("vars");
     });
@@ -45,16 +43,15 @@ describe("useMutation", () => {
   });
 
   it("should use latest mutation function", async () => {
-    const mutationFn = vi.fn() as (vars: void) => Promise<void>;
+    const mutationFn = vi.fn() as () => Promise<void>;
     const { result, rerender } = renderHook(
-      (mutationFn: (vars: void) => Promise<void> | void) =>
-        useMutation(mutationFn),
+      (mutationFn: () => Promise<void>) => useMutation(mutationFn),
       {
-        initialProps: mutationFn as (vars: void) => Promise<void> | void,
-      }
+        initialProps: mutationFn as () => Promise<void>,
+      },
     );
-    const newMutationFn = vi.fn() as (vars: void) => Promise<void>;
-    rerender(newMutationFn as (vars: void) => Promise<void> | void);
+    const newMutationFn = vi.fn() as () => Promise<void>;
+    rerender(newMutationFn as () => Promise<void>);
     await act(async () => {
       await result.current.mutate();
     });

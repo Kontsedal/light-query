@@ -1,14 +1,14 @@
-import { useQuery, UseQueryOptions } from "./useQuery";
+import { useQuery, type UseQueryOptions } from "./useQuery";
 import { useMemo, useRef, useState } from "react";
 import { useValueRef } from "./utils";
 
 export const usePagination = <T, D, P = number>(
   key: string,
   fetchFn: UsePaginationFetchFn<T, D>,
-  params: UsePaginationOptions<T, D, P>
+  params: UsePaginationOptions<T, D, P>,
 ) => {
   const [currentPageId, setCurrentPageId] = useState<P>(
-    (params?.defaultPageId ?? 1) as P
+    (params?.defaultPageId ?? 1) as P,
   );
   const currentPageKey = `${key}#[${String(currentPageId)}]`;
   const pages = useRef(new Map<P, T>());
@@ -22,15 +22,15 @@ export const usePagination = <T, D, P = number>(
   const query = useQuery(
     currentPageKey,
     async () => {
-      let paginationParams = getFetchPageParamsRef.current?.(
+      const paginationParams = getFetchPageParamsRef.current?.(
         currentPageId,
         currentPageId,
         pages.current.get(currentPageId),
-        pages.current
+        pages.current,
       );
       return fetchFnRef.current(paginationParams);
     },
-    params
+    params,
   );
   if (query.data && pages.current.get(currentPageId) !== query.data) {
     const newPages = new Map(pages.current);
@@ -38,6 +38,7 @@ export const usePagination = <T, D, P = number>(
     pages.current = newPages;
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pages.current and key are ref values intentionally excluded; getFetchPageParamsRef.current is a ref and doesn't trigger re-renders
   return useMemo(() => {
     const result = {
       ...query,
@@ -48,7 +49,7 @@ export const usePagination = <T, D, P = number>(
           pageId,
           currentPageId,
           pages.current.get(currentPageId),
-          pages.current
+          pages.current,
         );
       },
       fetchPage(pageId: P) {
@@ -75,10 +76,10 @@ export type UsePaginationOptions<T, D, P = number> = UseQueryOptions<T> & {
     requestedPageId: P,
     currentPageId: P,
     currentPage: T | undefined,
-    allPages: Map<P, T>
+    allPages: Map<P, T>,
   ) => D | undefined;
 };
 
 export type UsePaginationFetchFn<T, D> = (
-  paginationParams: D | undefined
+  paginationParams: D | undefined,
 ) => Promise<T> | T;

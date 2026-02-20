@@ -1,17 +1,18 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useValueRef } from "./utils";
 
 type MutateArgs<T> = T extends void
   ? [vars?: undefined, throwError?: boolean]
   : [vars: T, throwError?: boolean];
 
-export const useMutation = <T = void, D = any>(
-  mutationFn: (vars: T) => Promise<D> | D
+export const useMutation = <T = void, D = unknown>(
+  mutationFn: (vars: T) => Promise<D> | D,
 ) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<unknown | undefined>();
   const mutateRef = useValueRef(mutationFn);
-  const mutate = async (...args: MutateArgs<T>) => {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mutateRef.current is a ref value and intentionally excluded from deps
+  const mutate = useCallback(async (...args: MutateArgs<T>) => {
     const [vars, throwError = false] = args;
     setIsLoading(true);
     setError(undefined);
@@ -25,6 +26,9 @@ export const useMutation = <T = void, D = any>(
     } finally {
       setIsLoading(false);
     }
-  };
-  return useMemo(() => ({ isLoading, error, mutate }), [isLoading, error]);
+  }, []);
+  return useMemo(
+    () => ({ isLoading, error, mutate }),
+    [isLoading, error, mutate],
+  );
 };

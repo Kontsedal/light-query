@@ -7,7 +7,7 @@ export function wait(ms: number) {
 export const waitUntil = async (
   fn: () => boolean | Promise<boolean>,
   interval = 50,
-  maxAttempts = 5
+  maxAttempts = 5,
 ) => {
   let attempts = 0;
   async function tick() {
