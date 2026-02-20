@@ -627,4 +627,80 @@ describe("useQuery", () => {
     });
     expect(onError).toHaveBeenCalledWith(error);
   });
+
+  it("should call onSuccess callback after successful retry", async () => {
+    const cache = createCache();
+    const error = new Error("error");
+    const onSuccess = vi.fn();
+    let callCount = 0;
+    renderHook(() =>
+      useQuery(
+        queryKey,
+        async () => {
+          callCount++;
+          if (callCount === 1) {
+            throw error;
+          }
+          return queryData;
+        },
+        {
+          cache,
+          onSuccess,
+          retry: (attempt) => (attempt === 1 ? 10 : 0),
+        },
+      ),
+    );
+    await act(async () => {
+      await wait(100);
+    });
+    expect(onSuccess).toHaveBeenCalledWith(queryData);
+  });
+
+  it("should return getData function", async () => {
+    const cache = createCache();
+    const { result } = renderHook(() =>
+      useQuery(queryKey, async () => queryData, { cache }),
+    );
+    await act(async () => {
+      await wait(50);
+    });
+    expect(typeof result.current.getData).toBe("function");
+    expect(result.current.getData()).toEqual(queryData);
+  });
+
+  it("should handle error when no retry function is provided", async () => {
+    const cache = createCache();
+    const error = new Error("error");
+    const { result } = renderHook(() =>
+      useQuery(
+        queryKey,
+        async () => {
+          throw error;
+        },
+        { cache },
+      ),
+    );
+    await waitFor(() => {
+      expect(result.current.error).toBe(error);
+    });
+  });
+
+  it("should allow to jump to a specific page", async () => {
+    const cache = createCache();
+    const { result } = renderHook(() =>
+      useQuery(
+        queryKey,
+        async () => {
+          await wait(10);
+          return queryData;
+        },
+        { cache },
+      ),
+    );
+    await act(async () => {
+      await wait(50);
+      result.current.setData({ username: "page1" });
+    });
+    expect(result.current.getData()).toEqual({ username: "page1" });
+  });
 });

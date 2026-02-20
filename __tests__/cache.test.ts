@@ -254,6 +254,20 @@ describe("cache", () => {
       expect(callback).not.toHaveBeenCalled();
     });
 
+    it("should handle double unsubscribe gracefully", () => {
+      const cache = createCache();
+      const callback = vi.fn();
+      const unsubscribe = cache.sub(queryKey, callback);
+      cache.set(queryKey, { data: queryData });
+      expect(callback).toHaveBeenCalledTimes(1);
+      unsubscribe();
+      cache.set(queryKey, { data: { username: "test2" } });
+      expect(callback).toHaveBeenCalledTimes(1);
+      unsubscribe();
+      cache.set(queryKey, { data: { username: "test3" } });
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
     it("should not break on error in listener", async () => {
       const cache = createCache();
       const callback = vi.fn(() => {

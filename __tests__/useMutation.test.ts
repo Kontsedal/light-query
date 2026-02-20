@@ -58,4 +58,23 @@ describe("useMutation", () => {
     expect(newMutationFn).toHaveBeenCalled();
     expect(mutationFn).not.toHaveBeenCalled();
   });
+
+  it("should throw error when throwError is true", async () => {
+    const error = new Error("error");
+    const { result } = renderHook(() =>
+      useMutation(async () => {
+        await wait(50);
+        throw error;
+      }),
+    );
+    let thrownError: Error | null = null;
+    await act(async () => {
+      try {
+        await result.current.mutate(undefined, true);
+      } catch (e) {
+        thrownError = e as Error;
+      }
+    });
+    expect(thrownError).toBe(error);
+  });
 });
