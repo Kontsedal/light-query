@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { vi } from "vitest";
 import { faker } from "@faker-js/faker";
 import { createCache, useQuery } from "../lib";
 import { act, renderHook, waitFor } from "@testing-library/react";
@@ -140,8 +140,8 @@ describe("useQuery", () => {
   });
 
   it("should refetch the query after the interval", async () => {
-    const getter = jest.fn(() => queryData);
-    const refetchInterval = jest.fn(() => 10);
+    const getter = vi.fn(() => queryData);
+    const refetchInterval = vi.fn(() => 10);
     const cache = createCache();
     renderHook(() =>
       useQuery(queryKey, getter, {
@@ -157,7 +157,7 @@ describe("useQuery", () => {
   });
 
   it("should not refetch the query if the interval is 0", async () => {
-    const getter = jest.fn(() => queryData);
+    const getter = vi.fn(() => queryData);
     const cache = createCache();
     renderHook(() =>
       useQuery(queryKey, getter, {
@@ -172,8 +172,8 @@ describe("useQuery", () => {
   });
 
   it("should receive a previous data into the refetchInterval function", async () => {
-    const getter = jest.fn(() => queryData);
-    const refetchInterval = jest.fn(() => 10);
+    const getter = vi.fn(() => queryData);
+    const refetchInterval = vi.fn(() => 10);
     const cache = createCache();
     renderHook(() =>
       useQuery(queryKey, getter, {
@@ -216,7 +216,7 @@ describe("useQuery", () => {
     const cache = createCache({
       staleTime: 100000,
     });
-    const getter = jest.fn(() => queryData);
+    const getter = vi.fn(() => queryData);
     const { result } = renderHook(() =>
       useQuery(queryKey, getter, {
         cache,
@@ -230,7 +230,7 @@ describe("useQuery", () => {
 
   describe("refetch on window focus", () => {
     it("should refetch the query on window focus", async () => {
-      const getter = jest.fn(() => queryData);
+      const getter = vi.fn(() => queryData);
       const cache = createCache();
       renderHook(() =>
         useQuery(queryKey, getter, {
@@ -245,7 +245,7 @@ describe("useQuery", () => {
     });
 
     it("should not refetch the query on window focus if it's disabled", async () => {
-      const getter = jest.fn(() => queryData);
+      const getter = vi.fn(() => queryData);
       const cache = createCache();
       renderHook(() =>
         useQuery(queryKey, getter, {
@@ -260,7 +260,7 @@ describe("useQuery", () => {
     });
 
     it("should get default value from cache if not provided", async () => {
-      const getter = jest.fn(() => queryData);
+      const getter = vi.fn(() => queryData);
       const cache = createCache({
         refetchOnWindowFocus: true,
       });
@@ -278,7 +278,7 @@ describe("useQuery", () => {
 
   describe("refetch on window online event", () => {
     it("should refetch the query on reconnect", async () => {
-      const getter = jest.fn(() => queryData);
+      const getter = vi.fn(() => queryData);
       const cache = createCache();
       renderHook(() =>
         useQuery(queryKey, getter, {
@@ -293,7 +293,7 @@ describe("useQuery", () => {
     });
 
     it("should not refetch the query on online if it's disabled", async () => {
-      const getter = jest.fn(() => queryData);
+      const getter = vi.fn(() => queryData);
       const cache = createCache();
       renderHook(() =>
         useQuery(queryKey, getter, {
@@ -308,7 +308,7 @@ describe("useQuery", () => {
     });
 
     it("should get default value from cache if not provided", async () => {
-      const getter = jest.fn(() => queryData);
+      const getter = vi.fn(() => queryData);
       const cache = createCache({
         refetchOnReconnect: true,
       });
@@ -328,7 +328,7 @@ describe("useQuery", () => {
     it("should not retry if the retry function returns 0", async () => {
       const queryKey = faker.string.nanoid();
       let error = new Error("error");
-      const getter = jest.fn(() => {
+      const getter = vi.fn(() => {
         throw error;
       });
       const cache = createCache();
@@ -346,7 +346,7 @@ describe("useQuery", () => {
 
     it("should retry if the retry function returns a positive number", async () => {
       let error = new Error("error");
-      const getter = jest.fn(() => {
+      const getter = vi.fn(() => {
         throw error;
       });
       const cache = createCache();
@@ -369,7 +369,7 @@ describe("useQuery", () => {
 
     it("should not set error during retry", async () => {
       let error = new Error("error");
-      const getter = jest.fn(() => {
+      const getter = vi.fn(() => {
         throw error;
       });
       const cache = createCache();
@@ -391,7 +391,7 @@ describe("useQuery", () => {
 
     it("should not refetch on interval during retry", async () => {
       let error = new Error("error");
-      const getter = jest.fn(() => {
+      const getter = vi.fn(() => {
         throw error;
       });
       const cache = createCache();
@@ -599,7 +599,7 @@ describe("useQuery", () => {
 
   it("should call onSuccess callback after successful fetch", async () => {
     const cache = createCache();
-    const onSuccess = jest.fn();
+    const onSuccess = vi.fn();
     renderHook(() =>
       useQuery(queryKey, async () => queryData, { cache, onSuccess })
     );
@@ -612,7 +612,7 @@ describe("useQuery", () => {
   it("should call onError callback after failed fetch", async () => {
     const cache = createCache();
     const error = new Error("error");
-    const onError = jest.fn();
+    const onError = vi.fn();
     renderHook(() =>
       useQuery(
         queryKey,

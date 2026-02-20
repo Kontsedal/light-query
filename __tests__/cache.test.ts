@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { vi } from "vitest";
 import { createCache } from "../lib";
 import { faker } from "@faker-js/faker";
 import { wait } from "./utils";
@@ -158,7 +158,7 @@ describe("cache", () => {
         false,
         true
       );
-      const secondGetter = jest.fn();
+      const secondGetter = vi.fn();
       await cache.fetch(queryKey, async () => queryData, false, true);
       expect(cache.d[queryKey]).toMatchObject({
         data: undefined,
@@ -173,7 +173,7 @@ describe("cache", () => {
         staleTime: 1000,
       });
       await cache.fetch(queryKey, () => queryData, false, true);
-      const secondGetter = jest.fn();
+      const secondGetter = vi.fn();
       await cache.fetch(queryKey, secondGetter, false, true);
       expect(secondGetter).not.toHaveBeenCalled();
     });
@@ -212,7 +212,7 @@ describe("cache", () => {
         false,
         true
       );
-      const secondGetter = jest.fn();
+      const secondGetter = vi.fn();
       await cache.fetch(queryKey, secondGetter, true, true);
       expect(secondGetter).toHaveBeenCalled();
     });
@@ -222,7 +222,7 @@ describe("cache", () => {
         staleTime: 1000,
       });
       await cache.fetch(queryKey, () => queryData, false, true);
-      const secondGetter = jest.fn();
+      const secondGetter = vi.fn();
       await cache.fetch(queryKey, secondGetter, true, true);
       expect(secondGetter).toHaveBeenCalled();
     });
@@ -231,7 +231,7 @@ describe("cache", () => {
   describe("subscribe", () => {
     it("should call callback when query state changes", () => {
       const cache = createCache();
-      const callback = jest.fn();
+      const callback = vi.fn();
       cache.sub(queryKey, callback);
       cache.set(queryKey, { data: queryData });
       expect(callback).toHaveBeenCalled();
@@ -239,7 +239,7 @@ describe("cache", () => {
 
     it("should not call callback when notify is false", () => {
       const cache = createCache();
-      const callback = jest.fn();
+      const callback = vi.fn();
       cache.sub(queryKey, callback);
       cache.set(queryKey, { data: queryData }, false);
       expect(callback).not.toHaveBeenCalled();
@@ -247,7 +247,7 @@ describe("cache", () => {
 
     it("should unsubscribe", () => {
       const cache = createCache();
-      const callback = jest.fn();
+      const callback = vi.fn();
       const unsubscribe = cache.sub(queryKey, callback);
       unsubscribe();
       cache.set(queryKey, { data: queryData });
@@ -256,7 +256,7 @@ describe("cache", () => {
 
     it("should not break on error in listener", async () => {
       const cache = createCache();
-      const callback = jest.fn(() => {
+      const callback = vi.fn(() => {
         throw new Error("error");
       });
       cache.sub(queryKey, callback);
@@ -290,7 +290,7 @@ describe("cache", () => {
     it("should notify listeners on invalidation", async () => {
       const cache = createCache();
       await cache.fetch(queryKey, () => queryData, false, true);
-      const callback = jest.fn();
+      const callback = vi.fn();
       cache.sub(queryKey, callback);
       cache.invalidate(queryKey);
       expect(callback).toHaveBeenCalled();
@@ -370,7 +370,7 @@ describe("cache", () => {
         cacheTime: 100,
         garbageCollectorInterval: 5,
       });
-      const callback = jest.fn();
+      const callback = vi.fn();
       cache.sub(queryKey, callback);
       await cache.fetch(queryKey, () => queryData, false, true);
       await wait(150);

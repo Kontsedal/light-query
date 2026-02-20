@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { vi } from "vitest";
 import { faker } from "@faker-js/faker";
 import { act, renderHook } from "@testing-library/react";
 import { createCache, usePagination, UsePaginationFetchFn } from "../lib";
@@ -36,8 +36,8 @@ describe("usePagination", () => {
   });
 
   it("should call fetch fn with getFetchPageParams result", async () => {
-    const fetchFn = jest.fn(() => []);
-    const getFetchPageParams = jest.fn(() => ({ page: 1 }));
+    const fetchFn = vi.fn(() => []);
+    const getFetchPageParams = vi.fn(() => ({ page: 1 }));
     renderHook(() =>
       usePagination(queryKey, fetchFn, {
         getFetchPageParams,
@@ -171,7 +171,7 @@ describe("usePagination", () => {
   });
 
   it("should return the different data on query key change with disable", async () => {
-    const fetchFn = jest.fn(() => ({ a: 1 }));
+    const fetchFn = vi.fn(() => ({ a: 1 }));
     const { result, rerender } = renderHook(
       (props: { key: string; enabled: boolean }) =>
         usePagination(props.key, fetchFn, {

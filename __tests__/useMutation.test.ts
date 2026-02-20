@@ -1,4 +1,4 @@
-import { describe, expect, it, jest } from "@jest/globals";
+import { vi } from "vitest";
 import { useMutation } from "../lib";
 import { act, renderHook } from "@testing-library/react";
 import { wait } from "./utils";
@@ -34,7 +34,7 @@ describe("useMutation", () => {
   });
 
   it("should pass variables to mutation function", async () => {
-    const mutationFn = jest.fn();
+    const mutationFn = vi.fn();
     const { result } = renderHook(() =>
       useMutation<string>(mutationFn)
     );
@@ -45,7 +45,7 @@ describe("useMutation", () => {
   });
 
   it("should use latest mutation function", async () => {
-    const mutationFn = jest.fn() as jest.Mock<() => Promise<void>>;
+    const mutationFn = vi.fn() as (vars: void) => Promise<void>;
     const { result, rerender } = renderHook(
       (mutationFn: (vars: void) => Promise<void> | void) =>
         useMutation(mutationFn),
@@ -53,7 +53,7 @@ describe("useMutation", () => {
         initialProps: mutationFn as (vars: void) => Promise<void> | void,
       }
     );
-    const newMutationFn = jest.fn() as jest.Mock<() => Promise<void>>;
+    const newMutationFn = vi.fn() as (vars: void) => Promise<void>;
     rerender(newMutationFn as (vars: void) => Promise<void> | void);
     await act(async () => {
       await result.current.mutate();
