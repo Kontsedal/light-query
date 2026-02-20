@@ -23,20 +23,71 @@ yarn add @kontsedal/light-query
 pnpm add @kontsedal/light-query
 ```
 
-## Quick Start
+## Basic Usage
+
+### Fetching data
 
 ```tsx
 import { useQuery } from "@kontsedal/light-query";
 
-function UserProfile({ userId }) {
-  const { data, isLoading, error } = useQuery(
-    `user-${userId}`,
-    () => fetch(`/api/users/${userId}`).then((r) => r.json())
+function Users() {
+  const { data, isLoading, error } = useQuery("users", () =>
+    fetch("/api/users").then((r) => r.json())
   );
 
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div>Error loading user</div>;
-  return <div>{data.name}</div>;
+  if (isLoading) return <p>Loading...</p>;
+  if (error) return <p>Failed to load</p>;
+  return <ul>{data.map((u) => <li key={u.id}>{u.name}</li>)}</ul>;
+}
+```
+
+### Submitting data
+
+```tsx
+import { useMutation } from "@kontsedal/light-query";
+
+function CreatePost() {
+  const { mutate, isLoading, error } = useMutation((post) =>
+    fetch("/api/posts", { method: "POST", body: JSON.stringify(post) }).then(
+      (r) => r.json()
+    )
+  );
+
+  return (
+    <div>
+      <button onClick={() => mutate({ title: "Hello" })} disabled={isLoading}>
+        Create
+      </button>
+      {error && <p>Something went wrong</p>}
+    </div>
+  );
+}
+```
+
+### Paginated data
+
+```tsx
+import { usePagination } from "@kontsedal/light-query";
+
+function Posts() {
+  const { pages, pageId, fetchPage, hasPage, isLoading } = usePagination(
+    "posts",
+    (page) => fetch(`/api/posts?page=${page}`).then((r) => r.json()),
+    { getFetchPageParams: (requestedPage) => requestedPage }
+  );
+
+  return (
+    <div>
+      {pages.map((page) =>
+        page.items.map((item) => <Post key={item.id} item={item} />)
+      )}
+      {hasPage(pageId + 1) && (
+        <button onClick={() => fetchPage(pageId + 1)} disabled={isLoading}>
+          Load more
+        </button>
+      )}
+    </div>
+  );
 }
 ```
 
