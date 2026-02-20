@@ -24,6 +24,8 @@ export const useQuery = <T>(
   const fetchFnRef = useValueRef(fetchFn);
   const refetchIntervalRef = useValueRef(params?.refetchInterval);
   const retryFnRef = useValueRef<RetryFn<T> | undefined>(params?.retry);
+  const onSuccessRef = useValueRef(params?.onSuccess);
+  const onErrorRef = useValueRef(params?.onError);
   const retryFetch = async (error: unknown) => {
     if (!retryFnRef.current) {
       return;
@@ -66,6 +68,16 @@ export const useQuery = <T>(
     );
     if (!isUndefined(result?.error) && params?.retry) {
       await retryFetch(result.error);
+      const finalState = cache.get<T>(key);
+      if (finalState && !finalState.error && finalState.data !== undefined) {
+        onSuccessRef.current?.(finalState.data);
+      } else if (finalState?.error) {
+        onErrorRef.current?.(finalState.error);
+      }
+    } else if (result?.data !== undefined) {
+      onSuccessRef.current?.(result.data);
+    } else if (!isUndefined(result?.error)) {
+      onErrorRef.current?.(result.error);
     }
     if (!mounted.current) {
       return result;
@@ -95,6 +107,9 @@ export const useQuery = <T>(
       pickIfDefined(params || {}, ["cacheTime", "staleTime"]),
       false
     );
+    if (params?.initialData !== undefined && !cache.get<T>(key)?.lastFetchedAt) {
+      cache.set(key, { data: params.initialData }, false);
+    }
     let forcedRefetch = fetchQuery.bind(null, true);
     const cleanups: ((() => unknown) | boolean | undefined)[] = [
       (params?.refetchOnWindowFocus ?? queryState.refetchOnWindowFocus) &&
@@ -102,7 +117,7 @@ export const useQuery = <T>(
       (params?.refetchOnReconnect ?? queryState.refetchOnReconnect) &&
         addWindowListener("online", forcedRefetch),
     ];
-    fetchQuery(false).catch();
+    fetchQuery(false).catch(console.error);
     return () => {
       clearTimeout(refetchTimer.current);
       unsubscribe();
@@ -117,12 +132,27 @@ export const useQuery = <T>(
       error: queryState.error,
       isLoading: queryState.isLoading,
       isIdle: !queryState.isLoading && !queryState.lastFetchedAt,
-      isUpdating: queryState.isLoading && queryState.lastFetchedAt,
+      isUpdating: queryState.isLoading && !!queryState.lastFetchedAt,
+      isSuccess: !queryState.isLoading && !!queryState.data && !queryState.error,
+      isError: !queryState.isLoading && !!queryState.error,
+      isFetched: !!queryState.lastFetchedAt,
       lastFetchedAt: queryState.lastFetchedAt,
       getData: () => cache.get<T>(key)?.data,
+      setData: (updater: T | ((prev?: T) => T)) => {
+        const newData =
+          typeof updater === "function"
+            ? (updater as (prev?: T) => T)(cache.get<T>(key)?.data)
+            : updater;
+        cache.set(key, { data: newData });
+      },
       refetch: () => fetchQuery(true),
       reset: () =>
-        cache.set(key, { data: undefined, error: undefined, isLoading: false }),
+        cache.set(key, {
+          data: undefined,
+          error: undefined,
+          isLoading: false,
+          lastFetchedAt: undefined,
+        }),
     }),
     [
       queryState.data,
@@ -152,4 +182,7 @@ export type UseQueryOptions<T> = {
   cache?: Cache;
   retry?: RetryFn<T>;
   enabled?: boolean;
+  initialData?: T;
+  onSuccess?: (data: T) => void;
+  onError?: (error: unknown) => void;
 };

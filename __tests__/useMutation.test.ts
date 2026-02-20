@@ -35,7 +35,9 @@ describe("useMutation", () => {
 
   it("should pass variables to mutation function", async () => {
     const mutationFn = jest.fn();
-    const { result } = renderHook(() => useMutation(mutationFn));
+    const { result } = renderHook(() =>
+      useMutation<string>(mutationFn)
+    );
     await act(async () => {
       await result.current.mutate("vars");
     });
@@ -43,15 +45,16 @@ describe("useMutation", () => {
   });
 
   it("should use latest mutation function", async () => {
-    const mutationFn = jest.fn();
+    const mutationFn = jest.fn() as jest.Mock<() => Promise<void>>;
     const { result, rerender } = renderHook(
-      (mutationFn) => useMutation(mutationFn),
+      (mutationFn: (vars: void) => Promise<void> | void) =>
+        useMutation(mutationFn),
       {
-        initialProps: mutationFn,
+        initialProps: mutationFn as (vars: void) => Promise<void> | void,
       }
     );
-    const newMutationFn = jest.fn();
-    rerender(newMutationFn);
+    const newMutationFn = jest.fn() as jest.Mock<() => Promise<void>>;
+    rerender(newMutationFn as (vars: void) => Promise<void> | void);
     await act(async () => {
       await result.current.mutate();
     });

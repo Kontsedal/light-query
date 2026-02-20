@@ -29,7 +29,7 @@ describe("usePagination", () => {
       pages: [page],
       error: undefined,
       isLoading: false,
-      pageNumber: 1,
+      pageId: 1,
       hasPage: expect.any(Function),
       fetchPage: expect.any(Function),
     });
@@ -96,7 +96,7 @@ describe("usePagination", () => {
       pages: [page1, page2],
       error: undefined,
       isLoading: false,
-      pageNumber: 2,
+      pageId: 2,
     });
   });
 
@@ -146,7 +146,7 @@ describe("usePagination", () => {
       pages: [page1, page21],
       error: undefined,
       isLoading: false,
-      pageNumber: 20,
+      pageId: 20,
     });
   });
 
@@ -195,7 +195,7 @@ describe("usePagination", () => {
       pages: [],
       error: undefined,
       isLoading: false,
-      pageNumber: 1,
+      pageId: 1,
       hasPage: expect.any(Function),
       fetchPage: expect.any(Function),
     });

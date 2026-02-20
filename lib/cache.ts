@@ -34,7 +34,9 @@ export const createCache = (options?: CreateCacheOptions) => {
         listeners.forEach((listener) => {
           try {
             listener();
-          } catch (e) {}
+          } catch (e) {
+            console.error("light-query: Error in cache listener", e);
+          }
         });
       }
     },
@@ -42,9 +44,15 @@ export const createCache = (options?: CreateCacheOptions) => {
       let listeners = this.l[key] ?? [];
       this.l[key] = listeners;
       listeners.push(listener);
+      let removed = false;
       // Return a function to unsubscribe the listener
       return () => {
-        this.l[key] = listeners.filter((l) => l !== listener);
+        if (removed) return;
+        removed = true;
+        const idx = listeners.indexOf(listener);
+        if (idx !== -1) {
+          listeners.splice(idx, 1);
+        }
       };
     },
     init<T>(key: string) {
@@ -110,12 +118,19 @@ export const createCache = (options?: CreateCacheOptions) => {
         if (setError) {
           this.set(key, {
             isLoading: false,
-            error: e as Error,
+            error: e,
             lastFetchedAt: Date.now(),
           });
         }
         return { error: e };
       }
+    },
+    invalidate(keyOrPrefix: string) {
+      Object.keys(this.d).forEach((k) => {
+        if (k === keyOrPrefix || k.startsWith(keyOrPrefix)) {
+          this.set(k, { lastFetchedAt: undefined });
+        }
+      });
     },
     gInt: undefined,
     toggleGc(enabled: boolean) {
@@ -245,6 +260,12 @@ export type Cache = {
     forced: boolean,
     setError: boolean
   ) => Promise<{ error?: unknown; data?: T }>;
+  /**
+   * Invalidates cache entries by exact key or prefix match.
+   * Resets lastFetchedAt causing subscribed queries to refetch.
+   * @param {string} keyOrPrefix - Exact key or prefix to match
+   */
+  invalidate: (keyOrPrefix: string) => void;
   /**
    * The garbage collector interval
    * @type {NodeJS.Timeout | undefined}

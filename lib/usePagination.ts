@@ -2,55 +2,58 @@ import { useQuery, UseQueryOptions } from "./useQuery";
 import { useMemo, useRef, useState } from "react";
 import { useValueRef } from "./utils";
 
-export const usePagination = <T, D>(
+export const usePagination = <T, D, P = number>(
   key: string,
   fetchFn: UsePaginationFetchFn<T, D>,
-  params: UsePaginationOptions<T, D>
+  params: UsePaginationOptions<T, D, P>
 ) => {
-  const [currentPageNumber, setCurrentPageNumber] = useState(
-    params?.defaultPage ?? 1
+  const [currentPageId, setCurrentPageId] = useState<P>(
+    (params?.defaultPageId ?? 1) as P
   );
-  const currentPageKey = `${key}#[${currentPageNumber}]`;
-  const pages = useRef<Record<string, T[]>>({});
+  const currentPageKey = `${key}#[${String(currentPageId)}]`;
+  const pages = useRef(new Map<P, T>());
+  const prevKeyRef = useRef(key);
+  if (prevKeyRef.current !== key) {
+    prevKeyRef.current = key;
+    pages.current = new Map();
+  }
   const fetchFnRef = useValueRef(fetchFn);
   const getFetchPageParamsRef = useValueRef(params.getFetchPageParams);
   const query = useQuery(
     currentPageKey,
     async () => {
       let paginationParams = getFetchPageParamsRef.current?.(
-        currentPageNumber,
-        currentPageNumber,
-        pages.current?.[key]?.[currentPageNumber],
-        pages.current?.[key] || []
+        currentPageId,
+        currentPageId,
+        pages.current.get(currentPageId),
+        pages.current
       );
       return fetchFnRef.current(paginationParams);
     },
     params
   );
-  if (!pages.current[key]) {
-    pages.current[key] = [];
-  }
-  if (query.data && pages.current[key]?.[currentPageNumber] !== query.data) {
-    pages.current[key] = [...(pages.current[key] as T[])];
-    (pages.current[key] as T[])[currentPageNumber] = query.data;
+  if (query.data && pages.current.get(currentPageId) !== query.data) {
+    const newPages = new Map(pages.current);
+    newPages.set(currentPageId, query.data);
+    pages.current = newPages;
   }
 
   return useMemo(() => {
     const result = {
       ...query,
-      pages: (pages.current[key] as T[])?.filter(Boolean) || [],
-      pageNumber: currentPageNumber,
-      hasPage(pageNumber: number) {
+      pages: Array.from(pages.current.values()),
+      pageId: currentPageId,
+      hasPage(pageId: P) {
         return !!getFetchPageParamsRef.current(
-          pageNumber,
-          currentPageNumber,
-          pages.current[key]?.[currentPageNumber],
-          pages.current[key] as T[]
+          pageId,
+          currentPageId,
+          pages.current.get(currentPageId),
+          pages.current
         );
       },
-      fetchPage(pageNumber: number) {
-        if (result.hasPage(pageNumber)) {
-          setCurrentPageNumber(pageNumber);
+      fetchPage(pageId: P) {
+        if (result.hasPage(pageId)) {
+          setCurrentPageId(pageId);
         }
       },
     };
@@ -60,19 +63,19 @@ export const usePagination = <T, D>(
     query.error,
     query.isLoading,
     query.lastFetchedAt,
-    currentPageNumber,
-    pages.current[key],
+    currentPageId,
+    pages.current,
     key,
   ]);
 };
 
-export type UsePaginationOptions<T, D> = UseQueryOptions<T> & {
-  defaultPage?: number;
+export type UsePaginationOptions<T, D, P = number> = UseQueryOptions<T> & {
+  defaultPageId?: P;
   getFetchPageParams: (
-    requestedPageNumber: number,
-    currentPageNumber: number,
+    requestedPageId: P,
+    currentPageId: P,
     currentPage: T | undefined,
-    allPages: T[]
+    allPages: Map<P, T>
   ) => D | undefined;
 };
 

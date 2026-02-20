@@ -1,75 +1,319 @@
 # light-query
 
-Small (1.7kb gzipped) alternative to the react-query library. It's a simple set of react hooks that allows you to 
-fetch data from a server and have a control of retries and caching.
+[![npm version](https://img.shields.io/npm/v/@kontsedal/light-query)](https://www.npmjs.com/package/@kontsedal/light-query)
+[![gzip size](https://img.shields.io/badge/gzip-~2kb-brightgreen)](https://bundlephobia.com/package/@kontsedal/light-query)
+[![license](https://img.shields.io/npm/l/@kontsedal/light-query)](https://github.com/kontsedal/light-query/blob/main/LICENSE)
+
+A tiny (~2kb gzipped) React data-fetching library. Simple hooks for caching, retries, pagination, and keeping your server state in sync — without the bundle bloat.
+
+## Why light-query?
+
+- **Tiny** — ~2kb gzipped, zero runtime dependencies
+- **Simple API** — three hooks cover most data-fetching needs
+- **TypeScript-first** — full type inference, generic hooks
+- **Familiar** — if you've used react-query, you already know this
 
 ## Installation
 
-```shell
-npm i @kontsedal/light-query
+```bash
+npm install @kontsedal/light-query
+# or
+yarn add @kontsedal/light-query
+# or
+pnpm add @kontsedal/light-query
 ```
 
-## Usage
+## Quick Start
 
-### useQuery
-
-Fetches and caches the result of a function call, so consecutive calls will return the same result without making a request to the server.
-
-```typescript
+```tsx
 import { useQuery } from "@kontsedal/light-query";
-const { data, error, isLoading, refetch, reset } = useQuery("user", () => fetch("/user"), {
-  refetchInterval: () => 5000
-});
 
+function UserProfile({ userId }) {
+  const { data, isLoading, error } = useQuery(
+    `user-${userId}`,
+    () => fetch(`/api/users/${userId}`).then((r) => r.json())
+  );
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error loading user</div>;
+  return <div>{data.name}</div>;
+}
 ```
 
-#### Result object
+## API Reference
 
-- `data` - data returned by the function
-- `error` - error returned by the function
-- `isLoading` - boolean flag that indicates if the function is currently fetching data
-- `isIdle` - boolean flag that indicates that the fetch function has not been called yet
-- `isUpdating` - boolean flag that indicates that the fetch function is currently updating the data that was previously fetched
-- `lastFetchedAt` - timestamp of the last fetch (successful or failed)
-- `refetch` - function that forces the refetch of the data
-- `reset` - function that removes the data from the cache
+### `useQuery`
 
-#### Options object
-
-- `refetchInterval` - function that returns the interval in milliseconds to refetch the data. If the function returns non positive number, the data will not be refetched. Function is called with the last fetched data as an argument.
-- `cacheTime` - the time in milliseconds to keep the data in the cache after it is no longer used. If the data is not used for this time, it will be removed from the cache.
-- `staleTime` - the time in milliseconds to consider the data as fresh and not refresh it on the next access. If the data is older than this time, it will be refetched on the next access.
-- `refetchOnWindowFocus` - boolean flag that indicates if the data should be refetched when the window is focused again
-- `refetchOnReconnect` - boolean flag that indicates if the data should be refetched when the network connection is reestablished
-- `enabled` - boolean flag that indicates if the data should be fetched. If set to false, the data will not be fetched and the cache will not be updated. If there was no data in cache, this query will have an isIdle flag set to true.
-- `retry` - function that is called when the fetch function fails. Three arguments are passed to this function: number of attempt, error and the latest data. The function should return the time in milliseconds to wait before the next attempt. If it returns not positive number, it won't retry anymore.
-
-
-### useMutation
-
-The simple wrapper around the function to provide you with isLoading, error and mutate function.
+Fetches and caches data. Subsequent calls with the same key return cached data without refetching.
 
 ```typescript
-
-import { useMutation } from "@kontsedal/light-query";
-
-const { isLoading, error, mutate } = useMutation(async (login: string, password: string) => {
-  try {
-    const response = await fetch("/login", {
-      method: "POST",
-      body: JSON.stringify({ login, password })
-    });
-    return response.json();
-  } catch (error) {
-    throw new Error("Failed to login");
-  }
-})
+const result = useQuery<T>(key: string, fetchFn: () => Promise<T> | T, options?: UseQueryOptions<T>)
 ```
 
-#### Result object
-- `isLoading` - boolean flag that indicates if the function is currently executing
-- `error` - error returned by the function
-- `mutate` - function that executes the mutation
+#### Options
 
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | `boolean` | `true` | Set to `false` to disable automatic fetching |
+| `staleTime` | `number` | `0` | Milliseconds before data is considered stale and refetched on next access |
+| `cacheTime` | `number` | `300000` | Milliseconds to keep unused data in cache before garbage collection |
+| `initialData` | `T` | — | Pre-populate cache before first fetch |
+| `refetchInterval` | `(data?: T) => number \| Promise<number>` | — | Return interval in ms. Return `0` to stop polling |
+| `refetchOnWindowFocus` | `boolean` | `false` | Refetch when browser tab regains focus |
+| `refetchOnReconnect` | `boolean` | `false` | Refetch when network connection is restored |
+| `retry` | `(attempt, error, state?) => number \| Promise<number>` | — | Return delay in ms. Return `0` to stop retrying |
+| `onSuccess` | `(data: T) => void` | — | Called after a successful fetch |
+| `onError` | `(error: unknown) => void` | — | Called after a failed fetch |
+| `cache` | `Cache` | global | Use a custom cache instance |
 
+#### Return Value
 
+| Field | Type | Description |
+|---|---|---|
+| `data` | `T \| undefined` | The fetched data |
+| `error` | `unknown \| undefined` | The error, if the fetch failed |
+| `isLoading` | `boolean` | Currently fetching |
+| `isIdle` | `boolean` | Never fetched yet (`!isLoading && !lastFetchedAt`) |
+| `isUpdating` | `boolean` | Refetching after a previous successful load |
+| `isSuccess` | `boolean` | Has data, no error, not loading |
+| `isError` | `boolean` | Has error, not loading |
+| `isFetched` | `boolean` | At least one fetch attempt has completed |
+| `lastFetchedAt` | `number \| undefined` | Timestamp of the last fetch attempt |
+| `refetch` | `() => Promise` | Force a refetch, bypassing stale checks |
+| `reset` | `() => void` | Clear cached data, returning to idle state |
+| `setData` | `(data: T \| ((prev?: T) => T)) => void` | Manually update cached data (useful for optimistic updates) |
+| `getData` | `() => T \| undefined` | Read cached data outside of render (avoids stale closures) |
+
+---
+
+### `useMutation`
+
+A simple wrapper for async side effects (form submissions, API calls, etc.) without caching.
+
+```typescript
+const { isLoading, error, mutate } = useMutation<T, D>(
+  mutationFn: (vars: T) => Promise<D> | D
+)
+```
+
+When `T` is `void` (default), `mutate()` can be called with no arguments. When `T` is a specific type, the first argument is required.
+
+#### Return Value
+
+| Field | Type | Description |
+|---|---|---|
+| `isLoading` | `boolean` | Currently executing |
+| `error` | `unknown \| undefined` | Error from the last execution |
+| `mutate` | `(vars: T, throwError?: boolean) => Promise<D>` | Execute the mutation. Pass `throwError: true` to re-throw errors |
+
+---
+
+### `usePagination`
+
+Built on top of `useQuery` for managing paginated / infinite query data. Accumulates pages as you navigate, supports both numeric offsets and string cursors.
+
+```typescript
+const result = usePagination<T, D, P = number>(
+  key: string,
+  fetchFn: (params: D | undefined) => Promise<T> | T,
+  options: UsePaginationOptions<T, D, P>
+)
+```
+
+#### Options
+
+Extends all `useQuery` options, plus:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `defaultPageId` | `P` | `1` | Initial page identifier |
+| `getFetchPageParams` | `(requestedPageId, currentPageId, currentPage, allPages) => D \| undefined` | **required** | Maps a page ID to fetch parameters. Return `undefined` to indicate the page doesn't exist |
+
+The `allPages` argument is a `Map<P, T>` containing all fetched pages.
+
+#### Return Value
+
+All `useQuery` return fields, plus:
+
+| Field | Type | Description |
+|---|---|---|
+| `pages` | `T[]` | Array of all fetched pages |
+| `pageId` | `P` | Current page identifier |
+| `hasPage` | `(pageId: P) => boolean` | Check if a page can be fetched |
+| `fetchPage` | `(pageId: P) => void` | Navigate to a page |
+
+---
+
+### `createCache`
+
+Create a custom cache instance. A global cache is used by default.
+
+```typescript
+const cache = createCache(options?: CreateCacheOptions)
+```
+
+#### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `staleTime` | `number` | `0` | Default stale time for all queries |
+| `cacheTime` | `number` | `300000` | Default cache lifetime (5 min) |
+| `garbageCollectorInterval` | `number` | `500` | How often to check for expired entries (ms) |
+| `refetchOnWindowFocus` | `boolean` | `false` | Default for all queries |
+| `refetchOnReconnect` | `boolean` | `false` | Default for all queries |
+
+#### Methods
+
+| Method | Description |
+|---|---|
+| `invalidate(keyOrPrefix)` | Invalidate entries by exact key or prefix. Matching queries will refetch on next access |
+| `get(key)` | Read the current state for a key |
+| `set(key, values, notify?)` | Update state. Set `notify: false` to skip listener notifications |
+| `toggleGc(enabled)` | Enable/disable the garbage collector |
+
+---
+
+### `CacheContext` / `useCache`
+
+Provide a custom cache to a component tree via React context.
+
+```tsx
+import { createCache, CacheContext } from "@kontsedal/light-query";
+
+const myCache = createCache({ staleTime: 30000 });
+
+function App() {
+  return (
+    <CacheContext.Provider value={myCache}>
+      <MyComponent />
+    </CacheContext.Provider>
+  );
+}
+```
+
+## Advanced Patterns
+
+### Retry with Exponential Backoff
+
+```typescript
+const { data } = useQuery("posts", fetchPosts, {
+  retry: (attempt, error) => {
+    if (attempt >= 3) return 0; // stop after 3 attempts
+    return Math.min(1000 * 2 ** attempt, 30000); // 2s, 4s, 8s...
+  },
+});
+```
+
+### Optimistic Updates
+
+```typescript
+const { setData, refetch } = useQuery("todos", fetchTodos);
+const { mutate } = useMutation(addTodo);
+
+async function handleAdd(todo) {
+  setData((prev) => [...(prev ?? []), todo]); // optimistic update
+  try {
+    await mutate(todo);
+  } catch {
+    refetch(); // rollback on failure
+  }
+}
+```
+
+### Cache Invalidation After Mutation
+
+```typescript
+import { globalCache } from "@kontsedal/light-query";
+
+const { mutate } = useMutation(updateUser);
+
+async function handleSave(userData) {
+  await mutate(userData);
+  globalCache.invalidate("user-"); // invalidate all user-* queries
+}
+```
+
+### Conditional Fetching
+
+```typescript
+const { data: user } = useQuery("user", fetchUser);
+const { data: posts } = useQuery(
+  `posts-${user?.id}`,
+  () => fetchPosts(user.id),
+  { enabled: !!user?.id }
+);
+```
+
+### Cursor-Based Pagination
+
+```typescript
+type Page = { items: Item[]; nextCursor?: string };
+
+const { pages, pageId, fetchPage, hasPage } = usePagination<Page, string, string>(
+  "feed",
+  (cursor) => fetchFeed(cursor),
+  {
+    defaultPageId: "initial",
+    getFetchPageParams: (requestedId, currentId, currentPage, allPages) => {
+      if (requestedId === "initial") return "";
+      // Find the page that has the cursor pointing to the requested page
+      for (const [, page] of allPages) {
+        if (page.nextCursor === requestedId) return requestedId;
+      }
+      return undefined; // page not reachable
+    },
+  }
+);
+```
+
+### Numeric Pagination
+
+```typescript
+const { data, pages, pageId, fetchPage, hasPage } = usePagination(
+  "posts",
+  (page) => fetch(`/api/posts?page=${page}`).then((r) => r.json()),
+  {
+    getFetchPageParams: (requestedPage) => requestedPage,
+  }
+);
+
+// Navigate
+if (hasPage(pageId + 1)) fetchPage(pageId + 1);
+```
+
+### Polling
+
+```typescript
+const { data } = useQuery("status", fetchStatus, {
+  refetchInterval: (data) => {
+    if (data?.status === "completed") return 0; // stop polling
+    return 3000; // poll every 3 seconds
+  },
+});
+```
+
+## Comparison with react-query
+
+| Feature | light-query | react-query |
+|---|:---:|:---:|
+| Bundle size (gzip) | ~2kb | ~13kb |
+| Basic caching | Y | Y |
+| Stale time / cache time | Y | Y |
+| Retry logic | Y | Y |
+| Infinite / paginated queries | Y | Y |
+| Mutations | Y | Y |
+| Window focus refetch | Y | Y |
+| Network reconnect refetch | Y | Y |
+| Cache invalidation | Y | Y |
+| Optimistic updates | Y | Y |
+| Initial data | Y | Y |
+| onSuccess / onError | Y | Y |
+| DevTools | - | Y |
+| SSR / Suspense | - | Y |
+| Structural sharing | - | Y |
+
+light-query is designed for apps that need the core data-fetching primitives without the overhead. If you need advanced features like SSR, Suspense, or DevTools, use react-query.
+
+## License
+
+MIT

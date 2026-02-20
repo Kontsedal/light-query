@@ -472,6 +472,159 @@ describe("useQuery", () => {
       data: undefined,
       isLoading: false,
       error: undefined,
+      isIdle: true,
+      isFetched: false,
     });
+  });
+
+  it("should return boolean isUpdating", async () => {
+    const cache = createCache();
+    const { result } = renderHook(() =>
+      useQuery(
+        queryKey,
+        async () => {
+          await wait(50);
+          return queryData;
+        },
+        { cache }
+      )
+    );
+    await waitFor(() => {
+      expect(result.current.data).toEqual(queryData);
+    });
+    act(() => {
+      result.current.refetch();
+    });
+    expect(typeof result.current.isUpdating).toBe("boolean");
+  });
+
+  it("should return isSuccess, isError, and isFetched", async () => {
+    const cache = createCache();
+    const { result } = renderHook(() =>
+      useQuery(
+        queryKey,
+        async () => {
+          await wait(50);
+          return queryData;
+        },
+        { cache }
+      )
+    );
+    expect(result.current.isSuccess).toBe(false);
+    expect(result.current.isError).toBe(false);
+    expect(result.current.isFetched).toBe(false);
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+      expect(result.current.isError).toBe(false);
+      expect(result.current.isFetched).toBe(true);
+    });
+  });
+
+  it("should set isError on fetch failure", async () => {
+    const error = new Error("error");
+    const cache = createCache();
+    const { result, rerender } = renderHook(() =>
+      useQuery(
+        queryKey,
+        async () => {
+          throw error;
+        },
+        { cache }
+      )
+    );
+    await act(async () => {
+      await wait(50);
+    });
+    rerender();
+    expect(result.current.isError).toBe(true);
+    expect(result.current.isSuccess).toBe(false);
+  });
+
+  it("should allow to set data manually with setData", async () => {
+    const cache = createCache();
+    const myData = { username: "test-user" };
+    const { result, rerender } = renderHook(() =>
+      useQuery(queryKey, () => myData, { cache })
+    );
+    await act(async () => {});
+    await waitUntil(async () => {
+      rerender();
+      return result.current.data === myData;
+    });
+    const newData = { username: "manual" };
+    act(() => {
+      result.current.setData(newData);
+    });
+    rerender();
+    expect(result.current.data).toEqual(newData);
+  });
+
+  it("should allow to set data with updater function", async () => {
+    const cache = createCache();
+    const myData = { username: "test-user" };
+    const { result, rerender } = renderHook(() =>
+      useQuery(queryKey, () => myData, { cache })
+    );
+    await act(async () => {});
+    await waitUntil(async () => {
+      rerender();
+      return result.current.data === myData;
+    });
+    act(() => {
+      result.current.setData((prev) => ({
+        username: (prev?.username ?? "") + "_updated",
+      }));
+    });
+    rerender();
+    expect(result.current.data).toEqual({
+      username: "test-user_updated",
+    });
+  });
+
+  it("should use initialData when provided", async () => {
+    const cache = createCache();
+    const initialData = { username: "initial" };
+    const { result } = renderHook(() =>
+      useQuery(
+        queryKey,
+        async () => {
+          await wait(100);
+          return queryData;
+        },
+        { cache, initialData }
+      )
+    );
+    expect(result.current.data).toEqual(initialData);
+  });
+
+  it("should call onSuccess callback after successful fetch", async () => {
+    const cache = createCache();
+    const onSuccess = jest.fn();
+    renderHook(() =>
+      useQuery(queryKey, async () => queryData, { cache, onSuccess })
+    );
+    await act(async () => {
+      await wait(50);
+    });
+    expect(onSuccess).toHaveBeenCalledWith(queryData);
+  });
+
+  it("should call onError callback after failed fetch", async () => {
+    const cache = createCache();
+    const error = new Error("error");
+    const onError = jest.fn();
+    renderHook(() =>
+      useQuery(
+        queryKey,
+        async () => {
+          throw error;
+        },
+        { cache, onError }
+      )
+    );
+    await act(async () => {
+      await wait(50);
+    });
+    expect(onError).toHaveBeenCalledWith(error);
   });
 });

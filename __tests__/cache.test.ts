@@ -266,6 +266,37 @@ describe("cache", () => {
     });
   });
 
+  describe("invalidate", () => {
+    it("should invalidate exact key", async () => {
+      const cache = createCache();
+      await cache.fetch(queryKey, () => queryData, false, true);
+      expect(cache.d[queryKey]?.lastFetchedAt).toBeDefined();
+      cache.invalidate(queryKey);
+      expect(cache.d[queryKey]?.lastFetchedAt).toBeUndefined();
+    });
+
+    it("should invalidate keys by prefix", async () => {
+      const cache = createCache();
+      const prefix = "user-";
+      await cache.fetch(prefix + "1", () => queryData, false, true);
+      await cache.fetch(prefix + "2", () => queryData, false, true);
+      await cache.fetch("other", () => queryData, false, true);
+      cache.invalidate(prefix);
+      expect(cache.d[prefix + "1"]?.lastFetchedAt).toBeUndefined();
+      expect(cache.d[prefix + "2"]?.lastFetchedAt).toBeUndefined();
+      expect(cache.d["other"]?.lastFetchedAt).toBeDefined();
+    });
+
+    it("should notify listeners on invalidation", async () => {
+      const cache = createCache();
+      await cache.fetch(queryKey, () => queryData, false, true);
+      const callback = jest.fn();
+      cache.sub(queryKey, callback);
+      cache.invalidate(queryKey);
+      expect(callback).toHaveBeenCalled();
+    });
+  });
+
   describe("garbage collection", () => {
     it("should remove query state after cache time", async () => {
       const cache = createCache({
